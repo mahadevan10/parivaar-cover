@@ -5,7 +5,7 @@ import { SARVAM_LANGUAGES } from "@/lib/sarvam";
 const SARVAM_URL = "https://api.sarvam.ai/speech-to-text";
 const MAX_BYTES = 5 * 1024 * 1024;
 
-// Words Sarvam should expect, so insurance terms and demo names come back spelled right.
+// Words Sarvam should expect, so insurance terms and common names come back spelled right.
 const KEYTERMS = [
   "super top-up", "family floater", "co-pay", "room rent", "waiting period", "deductible",
   "sum insured", "diabetes", "diabetic", "lakh", "premium",
