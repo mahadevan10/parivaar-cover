@@ -16,7 +16,7 @@ const NUMBER_RE = /(?:₹\s*)?\d[\d,.]*\s*(?:lakhs?|lacs?|k\b|thousand|crores?|y
 
 export function Composer({
   onSend, disabled, placeholder, handsFree = false, listenToken = 0, onMicStart, toolbar,
-  speaking = false, muted = false, onToggleMute, onTalkMode,
+  speaking = false, playing = false, muted = false, onToggleMute, onTalkMode,
 }: {
   onSend: (text: string, meta: SendMeta) => void;
   disabled: boolean;
@@ -31,6 +31,8 @@ export function Composer({
   toolbar?: React.ReactNode;
   /** A reply is being read aloud. */
   speaking?: boolean;
+  /** Sound from the reply is actually playing. */
+  playing?: boolean;
   muted?: boolean;
   onToggleMute?: () => void;
   /** Turn talk mode on or off. */
@@ -97,10 +99,11 @@ export function Composer({
   // Barge in: in talk mode the mic watches while a reply is read, so the user can cut in.
   const { recording, armed, cancel } = rec;
   useEffect(() => {
-    if (handsFree && speaking && !recording && !busy) void startRef.current({ armed: true });
+    // Armed only once sound plays, so the mic learns the reply's echo, not the silence before it.
+    if (handsFree && speaking && playing && !recording && !busy) void startRef.current({ armed: true });
     // The reply ended without a barge in: record the next turn now.
     else if (handsFree && !speaking && armed) void startRef.current();
-  }, [handsFree, speaking, recording, busy, armed]);
+  }, [handsFree, speaking, playing, recording, busy, armed]);
   useEffect(() => {
     if (!handsFree && armed) cancel();
   }, [handsFree, armed, cancel]);

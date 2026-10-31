@@ -27,6 +27,8 @@ export function speechChunks(text: string): string[] {
  */
 export function useSpeaker() {
   const [speaking, setSpeaking] = useState(false);
+  // True once sound is actually coming out, not while the first clip is still loading.
+  const [playing, setPlaying] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const aborter = useRef<AbortController | null>(null);
   const run = useRef(0);
@@ -38,6 +40,7 @@ export function useSpeaker() {
     audio.current?.pause();
     audio.current = null;
     setSpeaking(false);
+    setPlaying(false);
   }, []);
 
   const speak = useCallback(async (text: string, userLanguage?: string): Promise<SpeakResult> => {
@@ -70,6 +73,7 @@ export function useSpeaker() {
         audio.current = a;
         await new Promise<void>((resolve) => {
           a.onended = a.onerror = a.onpause = () => resolve();
+          a.onplaying = () => setPlaying(true);
           a.play().catch(() => resolve());
         });
         URL.revokeObjectURL(url);
@@ -79,6 +83,7 @@ export function useSpeaker() {
       if (id === run.current) {
         aborter.current = null;
         setSpeaking(false);
+        setPlaying(false);
       }
     }
     return id === run.current ? "done" : "stopped";
@@ -86,5 +91,5 @@ export function useSpeaker() {
 
   useEffect(() => stop, [stop]);
 
-  return { speaking, speak, stop };
+  return { speaking, playing, speak, stop };
 }

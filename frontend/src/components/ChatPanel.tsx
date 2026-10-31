@@ -137,6 +137,7 @@ export function ChatPanel({
         onMicStart={speaker.stop}
         toolbar={toolbar}
         speaking={speaker.speaking}
+        playing={speaker.playing}
         muted={muted}
         onToggleMute={toggleMuted}
         onTalkMode={setTalk}

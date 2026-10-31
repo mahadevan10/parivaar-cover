@@ -13,10 +13,12 @@ const MIN_SPEECH_MS = 250;
 const PAUSE_MS = 1300;
 const NO_SPEECH_MS = 8000;
 // Barge in: while a reply is read aloud, the mic listens for the user cutting in.
-// Stricter than normal speech, so echo from the speaker doesn't trigger it.
-const BARGE_ABOVE_FLOOR = 0.18;
-const BARGE_MIN_LEVEL = 0.22;
-const BARGE_MS = 200;
+// The reply's own voice leaks into the mic, so the mic first learns how loud that echo is,
+// then only a voice clearly louder than it, for long enough, counts as the user.
+const BARGE_LEARN_MS = 800;
+const BARGE_OVER_ECHO = 1.5;
+const BARGE_MIN_LEVEL = 0.25;
+const BARGE_MS = 350;
 
 function pickMimeType(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
@@ -148,6 +150,8 @@ export function useRecorder({ onClip, onNoSpeech, autoStop = false, onBargeIn }:
       let speechMs = 0;
       let lastLoud = began;
       let bargeMs = 0;
+      let echo = 0;
+      const armedAt = began;
       let startedAt = Date.now();
 
       const record = () => {
@@ -184,7 +188,10 @@ export function useRecorder({ onClip, onNoSpeech, autoStop = false, onBargeIn }:
           lastLoud = now;
         }
         if (armedRef.current) {
-          const loud = level > Math.max(floor + BARGE_ABOVE_FLOOR, BARGE_MIN_LEVEL);
+          const learning = now - armedAt < BARGE_LEARN_MS;
+          const loud = !learning && level > Math.max(echo * BARGE_OVER_ECHO, BARGE_MIN_LEVEL);
+          // The echo level follows the loudest recent reply sound, easing down slowly.
+          if (!loud) echo = Math.max(echo * 0.998, level);
           bargeMs = loud ? bargeMs + (now - last) : Math.max(0, bargeMs - (now - last) / 2);
           if (bargeMs >= BARGE_MS) {
             onBargeInRef.current?.();
