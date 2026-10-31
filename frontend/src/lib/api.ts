@@ -34,12 +34,12 @@ export async function getRecommendation(family: FamilyProfile, sessionId: string
     await new Promise((r) => setTimeout(r, 300));
     return demoRecommendationFor(family);
   }
-  const { solution, claim_checks } = await post<{ solution: SolverOutput; claim_checks?: SolverClaimSeries[] }>(
+  const { id, solution, claim_checks } = await post<{ id?: string; solution: SolverOutput; claim_checks?: SolverClaimSeries[] }>(
     "/recommend",
     { family: toSolverFamily(family, sessionId) },
   );
   if (solution.status !== "ok") throw new NoFitError("No mix fits this budget.");
-  return toRecommendation(solution, claim_checks);
+  return toRecommendation(solution, claim_checks, id);
 }
 
 export type Transcript = { transcript: string; languageCode?: string };

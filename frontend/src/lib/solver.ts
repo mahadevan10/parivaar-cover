@@ -40,6 +40,8 @@ export type SolverClaim = {
 };
 
 export type SolverOutput = {
+  /** Set by the API; the /chat endpoint looks results up by it. */
+  id?: string;
   status: "ok" | "no_fit";
   family_id: string;
   budget: number;
@@ -60,7 +62,8 @@ export type SolverClaimSeries = {
   member_id: string;
   label: string;
   amount: number;
-  by_year: { policy_year: number; mix: SolverClaim; usual: SolverClaim }[];
+  /** `usual` is null when the solver found no usual pick to compare with. */
+  by_year: { policy_year: number; mix: SolverClaim; usual: SolverClaim | null }[];
 };
 
 const SPOUSE = new Set(["wife", "husband", "spouse"]);
@@ -128,17 +131,29 @@ function toOutcome(c: SolverClaim): ClaimOutcome {
   };
 }
 
+const NO_USUAL: ClaimOutcome = {
+  covered: false,
+  payable: 0,
+  outOfPocket: 0,
+  coveredFromYear: 0,
+  notes: ["No single policy fits this family to compare with."],
+};
+
 export function toClaimScenario(s: SolverClaimSeries): ClaimScenario {
   return {
     id: s.id,
     memberId: s.member_id,
     label: s.label,
     amount: s.amount,
-    byYear: s.by_year.map((y) => ({ year: y.policy_year, mix: toOutcome(y.mix), usual: toOutcome(y.usual) })),
+    byYear: s.by_year.map((y) => ({
+      year: y.policy_year,
+      mix: toOutcome(y.mix),
+      usual: y.usual ? toOutcome(y.usual) : { ...NO_USUAL, outOfPocket: s.amount, coveredFromYear: y.policy_year },
+    })),
   };
 }
 
-export function toRecommendation(out: SolverOutput, claimSeries: SolverClaimSeries[] = []): Recommendation {
+export function toRecommendation(out: SolverOutput, claimSeries: SolverClaimSeries[] = [], id?: string): Recommendation {
   const mix: PlanOption = {
     label: "Parivaar Cover mix",
     premium: out.total_premium,
@@ -164,7 +179,7 @@ export function toRecommendation(out: SolverOutput, claimSeries: SolverClaimSeri
     : [];
 
   return {
-    id: `${out.family_id}-${out.total_premium}`,
+    id: id ?? out.id ?? `${out.family_id}-${out.total_premium}`,
     illustrative: out.illustrative,
     usual,
     mix,
@@ -193,7 +208,7 @@ export function remapMembers(out: SolverOutput, series: SolverClaimSeries[], map
     series: series.map((s) => ({
       ...s,
       member_id: map(s.member_id),
-      by_year: s.by_year.map((y) => ({ ...y, mix: claim(y.mix), usual: claim(y.usual) })),
+      by_year: s.by_year.map((y) => ({ ...y, mix: claim(y.mix), usual: y.usual && claim(y.usual) })),
     })),
   };
 }
