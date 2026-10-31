@@ -39,8 +39,8 @@ The deck (`stage1_ppt/slide_content.md`, slide 5) planned this stack. For a 6-ho
 | Layer | Planned in the deck | Hackathon build |
 |---|---|---|
 | Frontend | React web, React Native mini-app | Next.js 16 (App Router), TypeScript, Tailwind 4 in `frontend/`. Mock backend built in until the API is live. |
-| Backend / solver | Python + FastAPI, Google OR-Tools | TBD |
-| AI | Claude Sonnet 5.5; Bhashini / Sarvam for Indian languages | Voice input: Sarvam AI speech-to-text (`saaras:v4`, auto language detect) via `frontend/src/app/api/stt`. LLM: TBD (backend). |
+| Backend / solver | Python + FastAPI, Google OR-Tools | Python 3, FastAPI and OR-Tools CP-SAT in `backend/`. Policies and families are JSON in `shared/`. |
+| AI | Claude Sonnet 5.5; Bhashini / Sarvam for Indian languages | Voice input: Sarvam AI speech-to-text (`saaras:v4`, auto language detect) via `frontend/src/app/api/stt`. LLM: Sarvam `sarvam-105b-conversations` in `backend/llm.py`, for intake and explanations only. |
 | Policy data | PostgreSQL + pgvector, PDF parsing | TBD (a JSON seed file is fine) |
 
 ## Repo layout and ownership
@@ -67,7 +67,16 @@ npm run dev
 
 Context for the frontend lives in `frontend/CONTEXT.md`. Run `/update-context` to refresh it.
 
-**Backend:** TBD.
+**Backend** (port 8000):
+
+```bash
+cd backend
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn app:app --reload --port 8000   # needs SARVAM_API_KEY in the repo-root .env
+.venv/bin/python -m unittest test_solver test_app   # tests, Sarvam is stubbed
+```
+
+Endpoints: `POST /recommend` (solver result, reasons and claim checks for years 1 to 4), `POST /chat` (intake, or explanations once `recommendation_id` is set), `GET /health`. Set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` in the frontend to use it.
 
 Secrets go in `.env`, which is gitignored. Commit a `.env.example` listing every variable without values, and share the real keys outside git.
 
