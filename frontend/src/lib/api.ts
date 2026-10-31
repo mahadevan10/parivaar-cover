@@ -1,6 +1,6 @@
 // Talks to the FastAPI backend. Set NEXT_PUBLIC_API_BASE_URL if it isn't on localhost:8000.
 
-import type { ChatRequest, ChatResponse, FamilyProfile, Recommendation } from "./types";
+import type { ChatRequest, ChatResponse, FamilyProfile, MixSummary, Recommendation } from "./types";
 import { claimsFor, toRecommendation, toSolverFamily, type SolverClaimSeries, type SolverOutput } from "./solver";
 
 const BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
@@ -30,6 +30,11 @@ export async function getRecommendation(family: FamilyProfile, sessionId: string
   );
   if (solution.status !== "ok") throw new NoFitError("No mix fits this budget.");
   return toRecommendation(solution, claim_checks, id);
+}
+
+/** Short why-this-mix and what-to-watch, written by Sarvam from the solver's facts. */
+export function getSummary(recommendationId: string): Promise<MixSummary> {
+  return post<MixSummary>("/summary", { recommendationId });
 }
 
 export type Transcript = { transcript: string; languageCode?: string };

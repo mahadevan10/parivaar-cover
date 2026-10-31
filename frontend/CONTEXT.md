@@ -2,12 +2,17 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, branch `fe/member-insights` (member notes replace the heard from line)._
+_Last updated: 2026-10-31, on `main` (member notes on the board, replies read sentence by sentence, language sent to /chat, summary box and catches in this mix)._
 
 ## Status
 
+- The results screen opens with a navy summary box: "Why this mix" and up to 3 "What to watch" lines. It calls the new `POST /summary` after the results load, shows a skeleton meanwhile, and leaves the box out if the call fails. Its footer says whether AI wrote it and that premiums are illustrative. Tested against the live backend with curl (Sarvam answers in about 0.6 seconds). Type check and lint pass. Not yet clicked through in the browser: the Chrome extension was not connected.
+- A new "Catches in this mix" list sits above the policy cards. It shows the solver's `mix_catches` (top-up waits longer than the base plan, co-pay under a top-up, top-up leaning on office cover, two insurers, shared cover), each with member avatars.
+- Policy card catches now come from the solver, built from each policy's fields, so they match the numbers it uses.
 - The app runs on live data only. The mock chat, demo data, claim-check fixture and its generator script are gone (#17 already removed "Use the demo family"). The backend must be running; the URL defaults to `http://localhost:8000`.
 - When `/chat` first says the family is complete, the app says "I have all your information" and asks the user to check the board and tap "I have verified all my information" (Family board tab on phones, Hindi if they spoke Hindi). In talk mode it also ends talk mode and says so. The backend's own ready line is dropped so it isn't said twice. The board button is now labelled "I have verified all my information" and glows while ready. Only that button, or "Try again" after an error, starts the search.
+- Replies are read sentence by sentence: the first sentence plays while the rest are made, so speech starts sooner. True streaming over Sarvam WebSockets was left out: the key goes in a header, which browsers can't set on a WebSocket, so it needs a relay server.
+- `/chat` requests carry `language` (Sarvam's detected language) for spoken messages. The backend ignores it until it is wired in; the backend developer has been asked to make the reply follow it. No frontend translation fallback, by choice.
 - Talk mode is a panel in place of the message box (`TalkPanel.tsx`), started from a wave button: live mic bars while listening, dots while thinking, waving amber bars while speaking. Replaces the old switch.
 - Replies are read aloud (Sarvam text-to-speech via `/api/tts`), with a hands-free talk mode and a sticky session language for speech-to-text. Merged in #13.
 - The optimise screen now follows the real request. "Testing combinations" keeps spinning until `/recommend` answers, then the last two checks tick, a "Done" line shows, and the results open. After 6 seconds a "Still working" note appears. Tested in the browser: the demo family takes 3.5 seconds end to end; a family of 8 took about 61 seconds and waited correctly.
@@ -46,13 +51,16 @@ _Last updated: 2026-10-31, branch `fe/member-insights` (member notes replace the
 | The search starts only from the verify button | A spoken "yes" could skip the check. |
 | `usual` and `saving` on `Recommendation` are nullable; no made-up comparison when no single floater fits | The solver has nothing to compare with, and inventing a usual pick would show a fake price. |
 | Optimise steps are paced by the real `/recommend` call; the solver's answer is held in `pending` until every step ticks | The old fixed timer ticked everything in 2.4 seconds, then sat still while big families took up to a minute. |
+| Summary text comes from Sarvam via `/summary`, never written in the UI | Keeps the core rule: the backend checks every amount, percent and name against the solver's facts and falls back to the solver's sentences. |
+| Fetch the summary separately, after the results show | The results never wait on the LLM. |
 | Condition names follow `shared/README.md` (`hypertension`, `heart_disease`); the UI shows friendly labels | The solver matches conditions by name. |
 
 ## Next
 
-1. Tune talk mode after more browser use: pause detection in a noisy room, Hindi and Hinglish with the real backend.
-2. Rewrite the demo script for real numbers: Mohan's year 2 heart claim is partly covered (₹1,80,000 co-pay).
-3. Demo polish: phone layout.
+1. Click through the summary box and the mix catches in the browser with the demo family, on desktop and phone widths.
+2. Tune talk mode after more browser use: pause detection in a noisy room, Hindi and Hinglish with the real backend.
+3. Rewrite the demo script for real numbers: Mohan's year 2 heart claim is partly covered (₹1,80,000 co-pay).
+4. Demo polish: phone layout.
 
 ## Open questions
 
@@ -60,6 +68,7 @@ _Last updated: 2026-10-31, branch `fe/member-insights` (member notes replace the
 - Should `/chat` take the spoken language, so mixed Hindi and English input gets a Hindi reply? Needs a contract change with the backend.
 - Sister and brother relations: does the solver accept them?
 - Unknown health conditions: suggested the backend treats them as a general pre-existing condition. Backend's call.
+- The summary is always in English. Should it follow the session language like the chat replies? Needs a backend change.
 - Families of 8 can take about a minute in `/recommend` (the demo family plus people aged 40, 12 and 58 took 61 seconds; the backend runs CP-SAT at full CPU). The UI now says it is still working, but there is no timeout or cancel. Worth asking the backend for a solver time limit.
 
 ## Run

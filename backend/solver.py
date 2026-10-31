@@ -186,6 +186,7 @@ def solve(family, policies=None):
         "usual_pick": usual,
         "saving_vs_usual": usual["premium"] - total if usual else None,
         "vs_usual": vs_usual(family, picks, usual),
+        "mix_catches": mix_catches(family, picks),
     }
 
 
@@ -195,9 +196,43 @@ def pick_out(c):
         "policy_id": p["id"], "insurer": p["insurer"], "product": p["product"], "plan_type": p["plan_type"],
         "members": c["members"], "sum_insured": p["sum_insured"], "deductible": p["deductible"],
         "premium": c["premium"], "copay_percent": p["copay_percent"],
-        "waiting_periods_months": p["waiting_periods_months"], "catches": p["catches"],
+        "waiting_periods_months": p["waiting_periods_months"], "catches": policy_catches(p),
         "source": p["source"],
     }
+
+
+# Catches are built from the policy's fields, so the text cannot drift from the numbers the
+# solver uses. other_catches in policies.json holds only what the fields do not say.
+
+SUB_LIMIT_NAMES = {"cardiac": "heart treatment", "fracture": "fractures"}
+
+
+def policy_catches(policy):
+    waits = policy["waiting_periods_months"]
+    out = []
+    if is_topup(policy):
+        out.append(f"Pays only after the year's bills cross {lakhs(policy['deductible'])}.")
+    if policy["copay_percent"]:
+        out.append(f"You pay {policy['copay_percent']}% of every claim.")
+    out.append(f"Illnesses you already have are covered {'only ' if waits['pre_existing'] >= 36 else ''}"
+               f"{years(waits['pre_existing'])}.")
+    for cond, months in policy["condition_waits_months"].items():
+        out.append(f"{cond.replace('_', ' ').capitalize()} is covered {years(months)}.")
+    if waits["specific_illness"]:
+        out.append(f"Some listed illnesses, like cataract and hernia, are covered only {years(waits['specific_illness'])}.")
+    if policy["room_rent"]["capped"]:
+        out.append(policy["room_rent"]["text"])
+    # Sub-limits without a known amount share one sentence, so a card does not list five of them
+    unknown = [s["item"] for s in policy["sub_limits"] if "Check the policy wording" in s["text"]]
+    out += [s["text"] for s in policy["sub_limits"] if s["item"] not in unknown]
+    if unknown:
+        label = names(SUB_LIMIT_NAMES.get(i, i.replace("_", " ")) for i in unknown)
+        one = len(unknown) == 1
+        out.append(f"{label[0].upper() + label[1:]} {'has a sub-limit' if one else 'have sub-limits'}. "
+                   f"Check the policy wording for the {'amount' if one else 'amounts'}.")
+    if policy["plan_type"] == "floater":
+        out.append("One cover is shared by everyone on the policy.")
+    return out + policy["other_catches"]
 
 
 # Reasons are facts the solver worked out, each with a code, the numbers behind it and
@@ -371,6 +406,85 @@ def vs_usual(family, picks, usual):
     return out
 
 
+def mix_catches(family, picks):
+    """Catches that come from how the picks stack, most serious first. Same shape as the reasons."""
+    policies = {p["id"]: p for p in load_policies()}
+    office = office_cover(family)
+    by_id = {m["id"]: m for m in family["members"]}
+    waits, copays, office_gaps, insurers, shared = [], {}, [], {}, []
+
+    for m in family["members"]:
+        mine = [p for p in picks if m["id"] in p["members"]]
+        base = next((p for p in mine if p["plan_type"] != "super_topup"), None)
+        topup = next((p for p in mine if p["plan_type"] == "super_topup"), None)
+        if topup is None:
+            continue
+
+        for cond in m["conditions"] if base else []:
+            base_wait = condition_wait(policies[base["policy_id"]], [cond])
+            topup_wait = condition_wait(policies[topup["policy_id"]], [cond])
+            if topup_wait <= base_wait:
+                continue
+            # Same year counting as claim_check: a 12-month wait ends at the start of year 2
+            start, end = base_wait // 12 + 1, topup_wait // 12
+            when = f"year {start}" if start == end else f"years {start} to {end}"
+            label = cond.replace("_", " ")
+            waits.append({"code": "topup_waits_longer", "members": [m["id"]],
+                          "policy_ids": [base["policy_id"], topup["policy_id"]], "condition": cond,
+                          "base_months": base_wait, "topup_months": topup_wait,
+                          "clause": wait_clause(policies[topup["policy_id"]], cond),
+                          "text": f"{m['name']}'s {label} is covered by {base['product']} {years(base_wait)} and by "
+                                  f"the {topup['insurer']} top-up {years(topup_wait)}. In {when}, only {base['product']} pays "
+                                  f"{label} claims, up to {lakhs(base['sum_insured'])}."})
+
+        if base and base["copay_percent"]:
+            copays.setdefault(base["policy_id"], (base, []))[1].append(m["id"])
+
+        own = base["sum_insured"] if base else 0
+        if office[m["id"]] and own < topup["deductible"]:
+            gap = f"between {lakhs(own)} and {lakhs(topup['deductible'])}" if own else f"up to {lakhs(topup['deductible'])}"
+            office_gaps.append({"code": "topup_on_office_cover", "members": [m["id"]], "policy_ids": [topup["policy_id"]],
+                                "office_cover": office[m["id"]], "deductible": topup["deductible"], "clause": "deductible",
+                                "text": f"{m['name']}'s top-up counts the {lakhs(office[m['id']])} office cover toward its "
+                                        f"{lakhs(topup['deductible'])} deductible. If {m['name']} leaves the job, bills "
+                                        f"{gap} are not covered."})
+
+        if base and base["insurer"] != topup["insurer"]:
+            insurers.setdefault((base["insurer"], topup["policy_id"]), (base, topup, []))[2].append(m["id"])
+
+    for base, who in copays.values():
+        share = base["sum_insured"] * base["copay_percent"] // 100
+        copays[base["policy_id"]] = {
+            "code": "copay_under_topup", "members": who, "policy_ids": [base["policy_id"]],
+            "copay_percent": base["copay_percent"], "most_paid": share, "clause": "copay_percent",
+            "text": f"{base['product']} makes {names(by_id[mid]['name'] for mid in who)} pay {base['copay_percent']}% "
+                    f"of each claim it covers. On a big bill, that share can reach {inr(share)}. The top-up does not pay it."}
+
+    for key, (base, topup, who) in list(insurers.items()):
+        bases = [p["policy_id"] for p in picks if p["plan_type"] != "super_topup" and set(p["members"]) & set(who)]
+        insurers[key] = {
+            "code": "two_insurers", "members": who, "policy_ids": list(dict.fromkeys(bases)) + [topup["policy_id"]],
+            "clause": "insurer",
+            "text": f"{names(by_id[mid]['name'] for mid in who)}'s base {'plan is' if len(who) == 1 else 'plans are'} "
+                    f"from {base['insurer']} and the top-up "
+                    f"from {topup['insurer']}. A bill above {lakhs(topup['deductible'])} means two claims, and "
+                    f"{topup['insurer']} asks for {base['insurer']}'s settlement papers."}
+
+    for topup in picks:
+        if topup["plan_type"] != "super_topup" or len(topup["members"]) < 2:
+            continue
+        floater = next((p for p in picks if p["plan_type"] == "floater" and set(p["members"]) == set(topup["members"])), None)
+        who = names(by_id[mid]["name"] for mid in topup["members"])
+        what = (f"the {lakhs(floater['sum_insured'])} floater and the {lakhs(topup['sum_insured'])} top-up" if floater
+                else f"the {lakhs(topup['sum_insured'])} top-up")
+        others = "the other" if len(topup["members"]) == 2 else "the others"
+        shared.append({"code": "shared_cover", "members": topup["members"],
+                       "policy_ids": [p["policy_id"] for p in (floater, topup) if p], "clause": "sum_insured",
+                       "text": f"{who} share {what}. A big claim for one of them leaves less for {others} that year."})
+
+    return waits + list(copays.values()) + office_gaps + list(insurers.values()) + shared
+
+
 def member_cover(family, picks):
     cover = office_cover(family)
     for p in picks:
@@ -409,6 +523,15 @@ def inr(amount):
         tail = head[-2:] + "," + tail
         head = head[:-2]
     return "₹" + (head + "," + tail if head else tail)
+
+
+def lakhs(amount):
+    """Cover amounts the way policies state them, like ₹10 lakh or ₹1 crore."""
+    if amount and amount % (100 * LAKH) == 0:
+        return f"₹{amount // (100 * LAKH)} crore"
+    if amount and amount % LAKH == 0:
+        return f"₹{amount // LAKH} lakh"
+    return inr(amount)
 
 
 def claim_check(family, picks, member_id, amount, policy_year, related_condition=None, treatment=None):

@@ -218,6 +218,24 @@ Return only a JSON object:
 {{"reply": "your answer", "citations": [policy ids from the facts that your answer relies on]}}
 """ + STYLE
 
+SUMMARY_PROMPT = """You write a short summary of a health insurance recommendation. It sits at the top of the results.
+
+The solver chose the policies and worked out every fact below. Use only these facts. Never add a number,
+a reason or a policy that is not in them. All premiums are illustrative.
+
+Facts, as JSON:
+{facts}
+
+Return only a JSON object:
+{{"why": "2 or 3 sentences on why this mix suits the family, compared with the usual single floater if there is one",
+  "watch": ["one line for each entry in watch_these, in the same order"]}}
+
+In why, use at most 60 words. Cover the yearly cost, the cover each person gets, and when existing illnesses are covered.
+Each line in watch is one sentence of at most 20 words. Keep the person's name and the key number or year.
+Copy every amount exactly as the facts write it.
+Use names, never he, she, his or her.
+""" + STYLE
+
 
 @app.post("/chat")
 def chat(req: ChatRequest):
@@ -248,9 +266,7 @@ def chat(req: ChatRequest):
     family = grounded(clean_family(new, family), family, english)
     missing = missing_details(family)
     reply = tidy(out.get("reply", ""))
-    for proper in [m["name"] for m in family["members"]] + [family["city"] or ""]:
-        if proper:
-            reply = re.sub(rf"\b{re.escape(proper)}\b", proper, reply, flags=re.IGNORECASE)
+    reply = proper_case(reply, [m["name"] for m in family["members"]] + [family["city"] or ""])
     if "?" not in reply:
         reply = f"{reply} {next_question(missing[0]) if missing else 'I have everything I need to find your options.'}"
     for m in family["members"]:
@@ -350,10 +366,128 @@ def explain_facts(rec):
         "picks": [{k: p[k] for k in keep} for p in rec["picks"]],
         "usual_pick": {k: usual[k] for k in keep if k in usual} if usual else None,
         "vs_usual": [r["text"] for r in rec["vs_usual"]],
+        "mix_catches": [c["text"] for c in rec.get("mix_catches", [])],
         "claim_checks": [{"label": c["label"], "member_id": c["member_id"], "amount": c["amount"], "by_year": [
             {"policy_year": y["policy_year"], "mix": y["mix"], "usual": y["usual"]} for y in c["by_year"]]}
             for c in claim_checks],
     }
+
+
+# Summary at the top of the results
+
+class SummaryRequest(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    recommendation_id: str
+
+
+@app.post("/summary")
+def summary(req: SummaryRequest):
+    """A short why-this-mix and what-to-watch, written by Sarvam from the solver's facts.
+
+    If Sarvam fails or its text has a number the facts do not, the solver's own sentences are
+    returned instead (source "solver"). Only Sarvam's text is stored, so a later call can retry.
+    """
+    rec = store.recommendation(req.recommendation_id)
+    if rec is None:
+        raise HTTPException(404, "Recommendation not found. Run /recommend again.")
+    if rec.get("summary"):
+        return rec["summary"]
+    if rec["solution"]["status"] != "ok":
+        raise HTTPException(422, "No mix to summarise.")
+    facts = summary_facts(rec["solution"], store.recommendation_family(rec["id"]))
+    try:
+        out = llm.ask_json(SUMMARY_PROMPT.format(facts=json.dumps(facts, ensure_ascii=False)),
+                           [{"role": "user", "content": "Write the summary."}])
+        checked = checked_summary(out, facts)
+    except Exception:  # Sarvam down, bad key or unreadable JSON
+        checked = None
+    if checked is None:
+        return fallback_summary(rec["solution"])
+    store.save_summary(rec["id"], checked)
+    return checked
+
+
+def summary_facts(solution, family):
+    name = {m["id"]: m["name"] for m in family["members"]}
+    return {
+        # Amounts go in written out, so the model copies them instead of formatting its own
+        "yearly_premium": solver.inr(solution["total_premium"]),
+        "saving_vs_usual": solver.inr(solution["saving_vs_usual"]) if solution["saving_vs_usual"] else None,
+        "members": [{"name": m["name"], "age": m["age"], "conditions": m["conditions"],
+                     "most_claimable_a_year": solver.inr(solution["member_cover"][m["id"]])} for m in family["members"]],
+        "vs_usual": [r["text"] for r in solution["vs_usual"]],
+        "picks": [{"policy": f"{p['insurer']} {p['product']}", "members": [name[mid] for mid in p["members"]],
+                   "premium": solver.inr(p["premium"]),
+                   "reasons": [r["text"] for r in p.get("reasons", []) if r["code"] != "next_best"]}
+                  for p in solution["picks"]],
+        "watch_these": [c["text"] for c in solution.get("mix_catches", [])[:3]],
+    }
+
+
+def fallback_summary(solution):
+    why = [r["text"] for r in solution["vs_usual"][:2]] or [r["text"] for r in solution["picks"][0].get("reasons", [])[:1]]
+    return {"why": " ".join(why), "watch": [c["text"] for c in solution.get("mix_catches", [])[:3]], "source": "solver"}
+
+
+RUPEES = re.compile(r"(?:₹|\brs\.?)\s*(\d[\d,]*(?:\.\d+)?)\s*(lakh|crore)?|(\d+(?:\.\d+)?)\s*(lakh|crore)", re.IGNORECASE)
+PERCENT = re.compile(r"(\d+(?:\.\d+)?)\s*(?:%|percent)", re.IGNORECASE)
+UNIT = {"": 1, "lakh": 100_000, "crore": 10_000_000}
+OPENERS = {"a", "an", "the", "this", "that", "these", "each", "both", "neither", "together", "overall", "your",
+           "with", "in", "on", "for", "if", "until", "from", "only", "all", "and", "but", "so", "while", "after"}
+
+
+def rupees_in(text):
+    """Every rupee amount in the text, so ₹10 lakh and ₹10,00,000 both read as 1000000."""
+    out = set()
+    for m in RUPEES.finditer(text):
+        number, unit = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+        out.add(round(float(number.replace(",", "")) * UNIT[(unit or "").lower()]))
+    return out
+
+
+def numbers_in(value):
+    if isinstance(value, bool):
+        return set()
+    if isinstance(value, int):
+        return {value}
+    if isinstance(value, dict):
+        value = list(value.values())
+    if isinstance(value, list):
+        return set().union(*(numbers_in(v) for v in value)) if value else set()
+    return set()
+
+
+def checked_summary(out, facts):
+    """Sarvam's summary, tidied, or None when it is the wrong shape or has a number the facts do not."""
+    why, watch = out.get("why"), out.get("watch")
+    if not isinstance(why, str) or not why.strip() or not isinstance(watch, list):
+        return None
+    no_dash = lambda t: re.sub(r"\s*[—–]\s*|\s+-\s+", ", ", str(t))
+    fix = lambda t: proper_case(tidy(no_dash(t)), [m["name"] for m in facts["members"]] + POLICY_NAMES)
+    why, watch = fix(why), list(dict.fromkeys(fix(w) for w in watch if str(w).strip()))[:3]
+    if len(why) > 450 or any(len(w) > 220 for w in watch):
+        return None
+    facts_text = json.dumps(facts, ensure_ascii=False)
+    allowed = rupees_in(facts_text) | numbers_in(facts)
+    percents = {float(p) for p in PERCENT.findall(facts_text)}
+    text = " ".join([why] + watch)
+    if not rupees_in(text) <= allowed or not {float(p) for p in PERCENT.findall(text)} <= percents:
+        return None
+    # A capitalised word the facts do not have is likely a made-up name, like Rachel for Rahul
+    known = set(re.findall(r"[a-z]+", (facts_text + SUMMARY_PROMPT).lower())) | OPENERS
+    if any(w.lower() not in known for w in re.findall(r"\b[A-Z][A-Za-z]*", text)):
+        return None
+    return {"why": why, "watch": watch, "source": "llm"}
+
+
+POLICY_NAMES = sorted({p["insurer"] for p in POLICIES} | {p["product"] for p in POLICIES})
+
+
+def proper_case(text, words):
+    """Puts names back in their own case. Sarvam sometimes writes "sneha" or "manipalcigna"."""
+    for word in sorted(filter(None, words), key=len, reverse=True):
+        text = re.sub(rf"\b{re.escape(word)}\b", word, text, flags=re.IGNORECASE)
+    return text
 
 
 def condition_name(text):

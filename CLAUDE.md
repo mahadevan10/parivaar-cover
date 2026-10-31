@@ -78,7 +78,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 Stored data: `sqlite3 backend/parivaar.db` (tables `policies`, `chat_messages`, `families`, `recommendations`). Set `PARIVAAR_DB` to use another file.
 
-Endpoints: `POST /recommend` (solver result, reasons and claim checks for years 1 to 4), `POST /chat` (intake, or explanations once `recommendation_id` is set), `GET /health`. Set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` in the frontend to use it.
+Endpoints: `POST /recommend` (solver result, reasons and claim checks for years 1 to 4), `POST /chat` (intake, or explanations once `recommendation_id` is set), `POST /summary` (short why-this-mix and what-to-watch for a recommendation, written by Sarvam from the solver's facts), `GET /health`. Set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` in the frontend to use it.
 
 Secrets go in `.env`, which is gitignored. Commit a `.env.example` listing every variable without values, and share the real keys outside git.
 
