@@ -6,6 +6,8 @@ import { conditionLabel, cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
 import { CheckIcon, MicIcon, PlusIcon, XIcon } from "./icons";
 
+let added = 0;
+
 // Names follow shared/README.md so the solver understands them.
 const CONDITIONS = ["diabetes", "hypertension", "heart_disease", "asthma"];
 
@@ -25,6 +27,11 @@ export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange
     onChange({ ...family, members: family.members.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
   const removeMember = (id: string) =>
     onChange({ ...family, members: family.members.filter((m) => m.id !== id) });
+  const addMember = () =>
+    onChange({
+      ...family,
+      members: [...family.members, { id: `added-${++added}`, name: "New person", relation: "family", conditions: [] }],
+    });
 
   const empty = family.members.length === 0;
 
@@ -52,6 +59,15 @@ export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange
               onRemove={() => removeMember(m.id)}
             />
           ))}
+          <li>
+            <button
+              type="button"
+              onClick={addMember}
+              className="flex h-full min-h-28 w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line bg-white/50 text-sm font-medium text-navy hover:border-sky hover:bg-sky-soft"
+            >
+              <PlusIcon className="h-4 w-4" /> Add person
+            </button>
+          </li>
         </ul>
       )}
 

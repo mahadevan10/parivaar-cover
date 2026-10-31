@@ -2,17 +2,15 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, branch `fe/solver-adapter`._
+_Last updated: 2026-10-31, branch `fe/backend-wiring`._
 
 ## Status
 
-- Chat and voice UI is on `main` (PR #2).
-- The frontend now reads the backend's real data: `shared/families.json` for the demo family and `shared/examples/demo_solver_output.json` for the result. Real products (Star Health, ManipalCigna, Reliance), catches, co-pays and waits show on screen.
-- Policy cards show the solver's own `reasons` ("why this pick") and its `next_best` option. The compare block shows `vs_usual` facts. Nothing is invented in the UI.
-- Claim check year 1 to 4 comes from the backend's `claim_check()`, saved in `src/lib/mock/claim_checks.json` by `scripts/gen_claim_checks.py`.
-- Mohan's year 2 heart claim now shows as partly covered: the mix pays ₹4,20,000 and he pays ₹1,80,000 (30% co-pay). The usual pick pays nothing until year 4.
-- `/api/stt` reaches Sarvam and handles errors. Not yet tested with the real key.
-- Backend has no HTTP API yet. Set `NEXT_PUBLIC_API_BASE_URL` once `/chat` and `/recommend` are up.
+- Frontend and backend are wired together. With `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`, `/recommend` (FastAPI, real solver, claim checks for years 1 to 4) drives the results screen. Tested in the browser.
+- `/chat` on the backend uses Sarvam's LLM (`sarvam-105b-conversations`). Not tested yet: no `SARVAM_API_KEY` on this machine. Without it the backend returns 502 and the UI says the assistant is offline.
+- "Use the demo family" loads in the browser in both modes, so the demo never waits on the LLM. The board also has "Add person".
+- Without `NEXT_PUBLIC_API_BASE_URL` the app runs on the mock: questions come from `src/lib/mock/chat.ts` (pattern matching, fixed question order) and results from `shared/` data.
+- Voice (`/api/stt`) is wired end to end. Needs `SARVAM_API_KEY` in `frontend/.env.local` to work.
 
 ## Decisions
 
@@ -34,24 +32,28 @@ _Last updated: 2026-10-31, branch `fe/solver-adapter`._
 
 ## Next
 
-1. Add the real `SARVAM_API_KEY` and test voice in Hindi, English and Hinglish.
-2. Agree `docs/api-contract.md` with the backend developer, then move it to `shared/`.
-3. When the backend serves `/recommend` and `/chat`, set `NEXT_PUBLIC_API_BASE_URL` and test against it.
-4. After backend fixes to `claim_check()`, rerun `python3 frontend/scripts/gen_claim_checks.py`.
-5. Demo polish: phone layout check, demo script, optional read-aloud with Sarvam Bulbul.
+1. Add `SARVAM_API_KEY` to `frontend/.env.local` (voice) and the repo-root `.env` (backend chat). Test voice and chat in Hindi, English and Hinglish.
+2. Rewrite the demo script for real numbers: Mohan's year 2 heart claim is partly covered (₹1,80,000 co-pay).
+3. Demo polish: phone layout, timing of the optimise animation, read-aloud with Sarvam Bulbul if time allows.
+4. When the backend fixes `claim_check()`, rerun `python3 frontend/scripts/gen_claim_checks.py` for the mock.
 
 ## Open questions
 
 - Backend `claim_check()`: in year 1 every claim fails, because months in force is 0 and the 1-month initial wait blocks it. The note then says "covers this only from year 1". Told to the user to pass on.
 - Backend `claim_check()` does not apply the 2-year wait for listed illnesses (knee, cataract), so those pay from year 2. The knee scenario is left out until fixed.
-- The backend uses Sarvam chat (`sarvam-105b`) in `backend/sarvam_hello.py`. Is that the explainer LLM instead of Claude? The root `CLAUDE.md` AI row should say which.
-- Will `/chat` return `heardFrom` per member? If not, the board hides that line.
+- The backend's LLM is Sarvam (`sarvam-105b-conversations`), not Claude. The root `CLAUDE.md` AI row should record this.
+- Unknown health conditions: suggested the backend treats them as a general pre-existing condition. Backend's call.
 
 ## Run
 
 ```bash
+# Backend (port 8000), needs SARVAM_API_KEY in the repo-root .env for /chat
+cd backend && python3 -m venv .venv && .venv/bin/pip install --no-cache-dir -r requirements.txt
+.venv/bin/uvicorn app:app --port 8000
+
+# Frontend (port 3000)
 cd frontend
-cp .env.example .env.local   # add SARVAM_API_KEY
+cp .env.example .env.local   # SARVAM_API_KEY for voice; NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 for the real backend
 npm install
-npm run dev                  # http://localhost:3000
+npm run dev
 ```
