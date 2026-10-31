@@ -11,6 +11,8 @@ from pathlib import Path
 
 from ortools.sat.python import cp_model
 
+import store
+
 SHARED = Path(__file__).resolve().parent.parent / "shared"
 LAKH = 100_000
 
@@ -34,7 +36,8 @@ LISTED_ILLNESSES = {"cataract", "hernia", "knee", "joint_replacement", "gallston
 
 
 def load_policies():
-    return json.loads((SHARED / "policies.json").read_text())["policies"]
+    """Policies from the policies table in SQLite, kept in step with shared/policies.json."""
+    return store.policies()
 
 
 def load_families():
