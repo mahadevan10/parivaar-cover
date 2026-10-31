@@ -2,36 +2,31 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, on `main` (member notes on the board, replies read sentence by sentence, language sent to /chat, summary box and catches in this mix)._
+_Last updated: 2026-10-31, on `main` (all frontend work merged, last PRs #22 and #23)._
 
 ## Status
 
-- The results screen opens with a navy summary box: "Why this mix" and up to 3 "What to watch" lines. It calls the new `POST /summary` after the results load, shows a skeleton meanwhile, and leaves the box out if the call fails. Its footer says whether AI wrote it and that premiums are illustrative. Tested against the live backend with curl (Sarvam answers in about 0.6 seconds). Type check and lint pass. Not yet clicked through in the browser: the Chrome extension was not connected.
-- A new "Catches in this mix" list sits above the policy cards. It shows the solver's `mix_catches` (top-up waits longer than the base plan, co-pay under a top-up, top-up leaning on office cover, two insurers, shared cover), each with member avatars.
-- Policy card catches now come from the solver, built from each policy's fields, so they match the numbers it uses.
-- The app runs on live data only. The mock chat, demo data, claim-check fixture and its generator script are gone (#17 already removed "Use the demo family"). The backend must be running; the URL defaults to `http://localhost:8000`.
-- When `/chat` first says the family is complete, the app says "I have all your information" and asks the user to check the board and tap "I have verified all my information" (Family board tab on phones, Hindi if they spoke Hindi). In talk mode it also ends talk mode and says so. The backend's own ready line is dropped so it isn't said twice. The board button is now labelled "I have verified all my information" and glows while ready. Only that button, or "Try again" after an error, starts the search.
-- Replies are read sentence by sentence: the first sentence plays while the rest are made, so speech starts sooner. True streaming over Sarvam WebSockets was left out: the key goes in a header, which browsers can't set on a WebSocket, so it needs a relay server.
-- `/chat` requests carry `language` (Sarvam's detected language) for spoken messages. The backend ignores it until it is wired in; the backend developer has been asked to make the reply follow it. No frontend translation fallback, by choice.
-- Talk mode is a panel in place of the message box (`TalkPanel.tsx`), started from a wave button: live mic bars while listening, dots while thinking, waving amber bars while speaking. Replaces the old switch.
-- Replies are read aloud (Sarvam text-to-speech via `/api/tts`), with a hands-free talk mode and a sticky session language for speech-to-text. Merged in #13.
-- The optimise screen now follows the real request. "Testing combinations" keeps spinning until `/recommend` answers, then the last two checks tick, a "Done" line shows, and the results open. After 6 seconds a "Still working" note appears. Tested in the browser: the demo family takes 3.5 seconds end to end; a family of 8 took about 61 seconds and waited correctly.
-- Fixed a duplicate React key warning when the mix holds the same product twice (big families get two Super Surplus Gold top-ups).
-- Voice input works in the browser after #10 (Chrome's `audio/webm;codecs=opus` type is stripped to the bare type).
-- The backend `/chat` prompt replies in the user's language.
-- Families with no single floater now work. When a parent is past the floaters' entry age (Mohan at 70, say), the backend sends `usual_pick: null`. The UI shows the mix with a "No single floater fits" card. Tested in the browser.
-- The dev page works at `127.0.0.1:3000` and from phones on the same Wi-Fi (`allowedDevOrigins` in `next.config.ts`). The backend CORS allows the same origins (backend #11).
-- `findMix` logs the real error to the console before showing the generic message.
-- Frontend and backend are wired together. `/recommend` (FastAPI, real solver, claim checks for years 1 to 4) drives the results screen. Tested in the browser.
-- `/chat` on the backend uses Sarvam's LLM (`sarvam-105b-conversations`). Tested with a four-turn English intake: it built the demo family and the solver returned the deck mix. Without `SARVAM_API_KEY` the backend returns 502 and the UI says the assistant is offline.
-- If `/chat` is down, the UI says the assistant is offline and the family board can still be filled by hand. The board has "Add person".
+- All frontend work is on `main`. No open frontend branches.
+- Live data only. The app always calls the backend (default `http://localhost:8000`). The mock, demo data and claim-check fixture are gone.
+- The repo-root `.env` now holds `SARVAM_API_KEY` on this machine. Without it `/chat` returned 502 and the app said "I can't reach the assistant".
+- Board: member cards show short notes on what matters for each person (age band, conditions and their waiting periods, office cover, a missing age in amber). The "heard from" quote is gone.
+- Intake end: when `/chat` first says the family is complete, the app says "I have all your information" and asks the user to check the board and tap "I have verified all my information" (Family board tab on phones, Hindi if they spoke Hindi). In talk mode it also ends talk mode. Only that button, or "Try again" after an error, starts the search.
+- Talk mode: a wave button opens a voice panel (`TalkPanel.tsx`) in place of the message box. Live mic bars while listening, dots while thinking, amber waving bars while speaking (tap to interrupt), mute and end buttons. It sends on a 1.3 second pause and reopens the mic after the reply.
+- Replies are read aloud with Sarvam text-to-speech via `/api/tts`, sentence by sentence: the first sentence plays while the rest are made. True WebSocket streaming was left out because it needs a relay server.
+- Speech-to-text keeps the first Indian language it detects for the session.
+- `/chat` requests carry `language` for spoken messages. The backend ignores it for now; the backend developer has been asked to make replies follow it. Today a Hindi message can still get an English reply. No frontend translation fallback, by choice.
+- Results: navy summary box from `POST /summary` (skeleton while loading, left out if it fails), "Catches in this mix" from the solver's `mix_catches`, policy card catches from the solver. Not yet clicked through in the browser.
+- Optimise screen follows the real `/recommend` call, with a "Still working" note after 6 seconds. Families with no single floater show a "No single floater fits" card.
+- The dev page works at `127.0.0.1:3000` and from phones on the same Wi-Fi.
+- Talk mode, sentence by sentence speech, the verify flow and the member notes pass type check and lint. They still need a full browser run.
+- Seen in one `/chat` test: "मेरे माता पिता के लिए पॉलिसी चाहिए" added only "Self" and missed the parents. Reported to the backend developer.
 
 ## Decisions
 
 | Decision | Why |
 |---|---|
 | Next.js 16 (App Router), TypeScript, Tailwind 4 | React, as in the deck. Server routes keep the Sarvam key off the browser without backend help. |
-| Sarvam speech-to-text through `/api/stt`, `language_code=unknown`, insurance keyterms | Multilingual input with auto-detect. Keyterms help with "super top-up", "floater" and names. |
+| Sarvam speech-to-text through `/api/stt`: auto-detect first, then the session language; insurance and Hindi family keyterms | Multilingual input. Keyterms help with "super top-up", "floater", names and family words. |
 | Transcript is shown for review, never auto-sent; numbers highlighted | A misheard age or amount would feed the solver wrong data. |
 | Talk mode is opt in: it auto-sends on a pause, reads replies aloud and reopens the mic | A real voice conversation for those who want it. The board still shows every number, so mistakes can be fixed. |
 | Read replies in the language of the reply's script, not the user's | Sarvam needs the text and voice language to match. |
@@ -42,11 +37,13 @@ _Last updated: 2026-10-31, on `main` (member notes on the board, replies read se
 | No mock: the app always calls the backend | The backend is live, and one code path is easier to trust in the demo. |
 | Contract proposal in `docs/api-contract.md` | `shared/` needs agreement from both developers. |
 | Use the backend's snake_case solver output as is; map it only in `src/lib/solver.ts` | No extra work for the backend, one place to change if the format moves. |
-| Import `shared/` JSON directly (`@shared/*` alias, Turbopack root set to the repo) | Demo uses real solver data and stays in sync with backend changes. |
+| `@shared/*` alias and Turbopack root kept in config, though nothing imports `shared/` since the mock went | Cheap to keep if the UI needs shared data again. |
 | Show solver `reasons`, `next_best` and `vs_usual` text as is | The solver states the facts; the UI and LLM only present them, which keeps the core rule. |
 | Policy citations open a "fine print" sheet built from the pick's own fields | The data has no clause text yet. Every sheet says it is from public brochures and not yet checked against the wording. |
 | Strip the codec suffix from the audio type in `/api/stt` | Sarvam rejects `audio/webm;codecs=opus`, which is what Chrome records. |
 | Offline message if `/chat` fails | The user can still fill the board by hand. |
+| Read replies sentence by sentence, not over WebSockets | Faster start with no relay server. Sarvam WebSockets need the key in a header, which browsers can't send. |
+| Send the spoken language to `/chat`; no frontend translation | The backend writes replies, so it should get the language right. |
 | App's own "all details" message when intake completes; talk mode ends there | The user must check the facts the solver will use, and the button is in the other pane. |
 | The search starts only from the verify button | A spoken "yes" could skip the check. |
 | `usual` and `saving` on `Recommendation` are nullable; no made-up comparison when no single floater fits | The solver has nothing to compare with, and inventing a usual pick would show a fake price. |
@@ -57,15 +54,14 @@ _Last updated: 2026-10-31, on `main` (member notes on the board, replies read se
 
 ## Next
 
-1. Click through the summary box and the mix catches in the browser with the demo family, on desktop and phone widths.
-2. Tune talk mode after more browser use: pause detection in a noisy room, Hindi and Hinglish with the real backend.
+1. Full browser run with the live backend: talk mode in Hindi and English, the verify message and button, member notes, summary box and mix catches, on desktop and phone widths.
+2. Once the backend uses `language`, check that talk mode replies and their voice follow the user's language.
 3. Rewrite the demo script for real numbers: Mohan's year 2 heart claim is partly covered (₹1,80,000 co-pay).
 4. Demo polish: phone layout.
 
 ## Open questions
 
 - The untracked `.history/` folder (editor local history) should go in the root `.gitignore`. That file is shared, so agree it with the backend developer.
-- Should `/chat` take the spoken language, so mixed Hindi and English input gets a Hindi reply? Needs a contract change with the backend.
 - Sister and brother relations: does the solver accept them?
 - Unknown health conditions: suggested the backend treats them as a general pre-existing condition. Backend's call.
 - The summary is always in English. Should it follow the session language like the chat replies? Needs a backend change.
@@ -76,11 +72,11 @@ _Last updated: 2026-10-31, on `main` (member notes on the board, replies read se
 ```bash
 # Backend (port 8000), needs SARVAM_API_KEY in the repo-root .env for /chat
 cd backend && python3 -m venv .venv && .venv/bin/pip install --no-cache-dir -r requirements.txt
-.venv/bin/uvicorn app:app --port 8000
+.venv/bin/uvicorn app:app --reload --port 8000
 
 # Frontend (port 3000)
 cd frontend
-cp .env.example .env.local   # SARVAM_API_KEY for voice; NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 for the real backend
+cp .env.example .env.local   # SARVAM_API_KEY for voice; backend URL defaults to http://localhost:8000
 npm install
 npm run dev                  # open http://localhost:3000; 127.0.0.1 and Wi-Fi addresses also work
 ```
