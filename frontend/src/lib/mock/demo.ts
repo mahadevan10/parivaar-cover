@@ -23,6 +23,8 @@ export const DEMO_FAMILY: FamilyProfile = {
 };
 
 export const DEMO_OUTPUT = demoOutput as SolverOutput;
+/** The demo family always has a usual pick. */
+export const DEMO_USUAL = DEMO_OUTPUT.usual_pick!;
 const DEMO_CLAIMS = claimChecks as SolverClaimSeries[];
 
 const SAME_ROLE: Record<string, string[]> = { spouse: ["spouse", "wife", "husband"] };
@@ -47,5 +49,5 @@ export function demoRecommendationFor(family: FamilyProfile): Recommendation {
 
 /** Look up a demo pick by product name, for the mock explainer. */
 export function demoPick(product: string) {
-  return [...DEMO_OUTPUT.picks, DEMO_OUTPUT.usual_pick].find((p) => p.product === product)!;
+  return [...DEMO_OUTPUT.picks, DEMO_USUAL].find((p) => p.product === product)!;
 }

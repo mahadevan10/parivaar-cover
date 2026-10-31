@@ -2,12 +2,15 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, branch `fe/claim-fixture`._
+_Last updated: 2026-10-31, branch `fe/no-usual-pick`._
 
 ## Status
 
+- Families with no single floater now work. When a parent is past the floaters' entry age (Mohan at 70, say), the backend sends `usual_pick: null`. The UI used to crash on that and say "I couldn't reach the optimiser". Now it shows the mix with a "No single floater fits" card. Tested in the browser.
+- The dev page works at `127.0.0.1:3000` and from phones on the same Wi-Fi (`allowedDevOrigins` in `next.config.ts`). Before, it rendered but never hydrated, so no button worked. The backend CORS allows the same origins (backend #11).
+- `findMix` logs the real error to the console before showing the generic message.
 - Frontend and backend are wired together. With `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`, `/recommend` (FastAPI, real solver, claim checks for years 1 to 4) drives the results screen. Tested in the browser.
-- `/chat` on the backend uses Sarvam's LLM (`sarvam-105b-conversations`). Not tested yet: no `SARVAM_API_KEY` on this machine. Without it the backend returns 502 and the UI says the assistant is offline.
+- `/chat` on the backend uses Sarvam's LLM (`sarvam-105b-conversations`). Tested with a four-turn English intake: it built the demo family and the solver returned the deck mix. Without `SARVAM_API_KEY` the backend returns 502 and the UI says the assistant is offline.
 - "Use the demo family" loads in the browser in both modes, so the demo never waits on the LLM. The board also has "Add person".
 - Without `NEXT_PUBLIC_API_BASE_URL` the app runs on the mock: questions come from `src/lib/mock/chat.ts` (pattern matching, fixed question order) and results from `shared/` data.
 - Mock claim checks rebuilt from the fixed `claim_check()` (backend #7): year 1 works, and Lata's knee surgery is covered from year 3 on both options.
@@ -29,19 +32,20 @@ _Last updated: 2026-10-31, branch `fe/claim-fixture`._
 | Import `shared/` JSON directly (`@shared/*` alias, Turbopack root set to the repo) | Demo uses real solver data and stays in sync with backend changes. |
 | Show solver `reasons`, `next_best` and `vs_usual` text as is | The solver states the facts; the UI and LLM only present them, which keeps the core rule. |
 | Policy citations open a "fine print" sheet built from the pick's own fields | The data has no clause text yet. Every sheet says it is from public brochures and not yet checked against the wording. |
+| `usual` and `saving` on `Recommendation` are nullable; no made-up comparison when no single floater fits | The solver has nothing to compare with, and inventing a usual pick would show a fake price. |
 | Condition names follow `shared/README.md` (`hypertension`, `heart_disease`); the UI shows friendly labels | The solver matches conditions by name. |
 
 ## Next
 
-1. Add `SARVAM_API_KEY` to `frontend/.env.local` (voice) and the repo-root `.env` (backend chat). Test voice and chat in Hindi, English and Hinglish.
+1. Test voice and chat in Hindi and Hinglish. English chat intake works.
 2. Rewrite the demo script for real numbers: Mohan's year 2 heart claim is partly covered (₹1,80,000 co-pay).
 3. Demo polish: phone layout, timing of the optimise animation, read-aloud with Sarvam Bulbul if time allows.
 4. Whenever `backend/solver.py` changes, rerun `python3 frontend/scripts/gen_claim_checks.py` so the mock matches.
 
 ## Open questions
 
-- The backend's LLM is Sarvam (`sarvam-105b-conversations`), not Claude. The root `CLAUDE.md` AI row should record this.
 - Unknown health conditions: suggested the backend treats them as a general pre-existing condition. Backend's call.
+- Families of 8 or more take about 18 seconds in `/recommend` (7 take about 3). The optimise screen just waits. Fine for the demo family; worth a timeout message if we show bigger families.
 
 ## Run
 
@@ -54,5 +58,5 @@ cd backend && python3 -m venv .venv && .venv/bin/pip install --no-cache-dir -r r
 cd frontend
 cp .env.example .env.local   # SARVAM_API_KEY for voice; NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 for the real backend
 npm install
-npm run dev
+npm run dev                  # open http://localhost:3000; 127.0.0.1 and Wi-Fi addresses also work
 ```
