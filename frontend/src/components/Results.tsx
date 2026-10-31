@@ -50,8 +50,8 @@ export function Results({ rec, family, onOpenPolicy, onEditFamily }: Props) {
       <div>
         <h3 className="mb-3 font-semibold text-ink">The {rec.mix.policies.length} policies and their catches</h3>
         <ul className="grid gap-3 md:grid-cols-2">
-          {rec.mix.policies.map((p) => (
-            <PolicyCard key={p.id} policy={p} nameOf={nameOf} indexOf={indexOf} onOpen={() => onOpenPolicy(p.id)} />
+          {rec.mix.policies.map((p, i) => (
+            <PolicyCard key={`${p.id}-${i}`} policy={p} nameOf={nameOf} indexOf={indexOf} onOpen={() => onOpenPolicy(p.id)} />
           ))}
         </ul>
       </div>

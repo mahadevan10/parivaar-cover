@@ -28,6 +28,7 @@ SCENARIOS = [
      "related_condition": "diabetes", "treatment": "cardiac"},
     {"id": "rahul-cancer", "member_id": "rahul", "label": "Cancer treatment", "amount": 3_000_000},
     {"id": "lata-knee", "member_id": "lata", "label": "Knee surgery", "amount": 350_000, "treatment": "knee"},
+    {"id": "aarav-dengue", "member_id": "aarav", "label": "Dengue hospital stay", "amount": 150_000},
 ]
 
 result = []
