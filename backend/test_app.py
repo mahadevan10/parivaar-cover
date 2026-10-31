@@ -132,5 +132,19 @@ class Explain(unittest.TestCase):
         self.assertEqual(client.post("/chat", json={"message": "hi", "recommendationId": "rec-x"}).status_code, 404)
 
 
+class Cors(unittest.TestCase):
+    def preflight(self, origin):
+        return client.options("/recommend", headers={"Origin": origin, "Access-Control-Request-Method": "POST",
+                                                      "Access-Control-Request-Headers": "content-type"})
+
+    def test_allows_the_frontend_on_this_machine_and_the_local_network(self):
+        for origin in ["http://localhost:3000", "http://127.0.0.1:3000", "http://10.150.24.59:3000",
+                       "http://192.168.1.20:3000"]:
+            self.assertEqual(self.preflight(origin).status_code, 200, origin)
+
+    def test_blocks_other_sites(self):
+        self.assertEqual(self.preflight("https://example.com").status_code, 400)
+
+
 if __name__ == "__main__":
     unittest.main()

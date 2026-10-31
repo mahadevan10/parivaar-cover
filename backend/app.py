@@ -17,7 +17,10 @@ import llm
 import solver
 
 app = FastAPI(title="Parivaar Cover")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000"],
+# The frontend on this machine, or on a phone or laptop on the same Wi-Fi for the demo
+app.add_middleware(CORSMiddleware,
+                   allow_origin_regex=r"http://(localhost|127\.0\.0\.1|10(\.\d+){3}|192\.168(\.\d+){2}"
+                                      r"|172\.(1[6-9]|2\d|3[01])(\.\d+){2}):3000",
                    allow_methods=["*"], allow_headers=["*"])
 
 POLICIES = solver.load_policies()
