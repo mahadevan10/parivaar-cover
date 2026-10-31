@@ -50,8 +50,9 @@ export type SolverOutput = {
   total_premium: number;
   total_cover: number;
   member_cover: Record<string, number>;
-  usual_pick: SolverPick;
-  saving_vs_usual: number;
+  /** Null when no single floater can take the whole family. */
+  usual_pick: SolverPick | null;
+  saving_vs_usual: number | null;
   vs_usual?: { code: string; text: string }[];
   claim_check?: { mix: SolverClaim; usual: SolverClaim };
 };
@@ -160,7 +161,7 @@ export function toRecommendation(out: SolverOutput, claimSeries: SolverClaimSeri
     totalCover: out.total_cover,
     policies: out.picks.map(toPolicy),
   };
-  const usual: PlanOption = {
+  const usual: PlanOption | null = out.usual_pick && {
     label: "Usual pick",
     premium: out.usual_pick.premium,
     totalCover: out.usual_pick.sum_insured,
@@ -201,7 +202,7 @@ export function remapMembers(out: SolverOutput, series: SolverClaimSeries[], map
     out: {
       ...out,
       picks: out.picks.map(pick),
-      usual_pick: pick(out.usual_pick),
+      usual_pick: out.usual_pick && pick(out.usual_pick),
       member_cover: Object.fromEntries(Object.entries(out.member_cover).map(([k, v]) => [map(k), v])),
       claim_check: out.claim_check && { mix: claim(out.claim_check.mix), usual: claim(out.claim_check.usual) },
     },

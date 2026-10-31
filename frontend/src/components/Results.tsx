@@ -73,29 +73,39 @@ function conditionWaits(policies: Policy[], family: FamilyProfile): string[] {
 
 function Compare({ rec, family }: { rec: Recommendation; family: FamilyProfile }) {
   const { usual, mix } = rec;
-  const times = mix.totalCover / usual.totalCover;
-  const usualPolicy = usual.policies[0];
+  const times = usual ? mix.totalCover / usual.totalCover : 0;
+  const usualPolicy = usual?.policies[0];
   const mixCopays = mix.policies.filter((p) => p.copayPercent > 0);
   const facts = rec.vsUsual.filter((f) => f.code !== "member_cover");
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="rounded-2xl border border-line bg-white p-4">
-        <div className="text-sm font-medium text-muted">{usual.label}</div>
-        <div className="mt-1 text-2xl font-bold text-ink">{rupees(usual.premium)}<span className="text-sm font-normal text-muted"> a year*</span></div>
-        <div className="mt-0.5 text-sm text-ink">{cover(usual.totalCover)} total cover</div>
-        <ul className="mt-3 space-y-1 text-sm text-muted">
-          {usualPolicy && <li>· One {usualPolicy.product} floater for all {usualPolicy.memberIds.length}</li>}
-          {conditionWaits(usual.policies, family).map((w) => <li key={w}>· {w}</li>)}
-        </ul>
-      </div>
+      {usual ? (
+        <div className="rounded-2xl border border-line bg-white p-4">
+          <div className="text-sm font-medium text-muted">{usual.label}</div>
+          <div className="mt-1 text-2xl font-bold text-ink">{rupees(usual.premium)}<span className="text-sm font-normal text-muted"> a year*</span></div>
+          <div className="mt-0.5 text-sm text-ink">{cover(usual.totalCover)} total cover</div>
+          <ul className="mt-3 space-y-1 text-sm text-muted">
+            {usualPolicy && <li>· One {usualPolicy.product} floater for all {usualPolicy.memberIds.length}</li>}
+            {conditionWaits(usual.policies, family).map((w) => <li key={w}>· {w}</li>)}
+          </ul>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-line bg-white p-4">
+          <div className="text-sm font-medium text-muted">Usual pick</div>
+          <div className="mt-1 text-lg font-semibold text-ink">No single floater fits</div>
+          <p className="mt-1 text-sm text-muted">
+            No family floater takes all {family.members.length} of you, so there is no one-policy price to compare with.
+          </p>
+        </div>
+      )}
       <div className="relative rounded-2xl border-2 border-sky bg-white p-4 shadow-sm">
         <span className="absolute -top-3 left-4 rounded-full bg-sky px-2.5 py-0.5 text-xs font-semibold text-navy">Recommended</span>
         <div className="text-sm font-medium text-navy">{mix.label}</div>
         <div className="mt-1 text-2xl font-bold text-navy">{rupees(mix.premium)}<span className="text-sm font-normal text-muted"> a year*</span></div>
         <div className="mt-0.5 text-sm text-ink">{cover(mix.totalCover)} total cover</div>
         <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
-          {rec.saving > 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">{rupees(rec.saving)} less a year</span>}
+          {rec.saving != null && rec.saving > 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">{rupees(rec.saving)} less a year</span>}
           {times > 1 && <span className="rounded-full bg-sky-soft px-2 py-0.5 font-medium text-navy">{Number(times.toFixed(1))}x the cover</span>}
           <span className="rounded-full bg-canvas px-2 py-0.5 text-ink">{mix.policies.length} policies</span>
           {!facts.some((f) => f.code === "condition_wait") && conditionWaits(mix.policies, family).map((w) => (
@@ -128,7 +138,7 @@ function CoverMap({ rec, family, indexOf }: { rec: Recommendation; family: Famil
   const rows = family.members
     .map((m) => {
       const policies = rec.mix.policies.filter((p) => p.memberIds.includes(m.id));
-      const usual = rec.usual.policies.find((p) => p.memberIds.includes(m.id));
+      const usual = rec.usual?.policies.find((p) => p.memberIds.includes(m.id));
       return {
         m,
         base: policies.filter((p) => p.kind !== "super_topup"),
@@ -149,7 +159,7 @@ function CoverMap({ rec, family, indexOf }: { rec: Recommendation; family: Famil
         <div className="flex gap-3 text-xs text-muted">
           <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-navy" />Base plan</span>
           <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-sky" />Super top-up</span>
-          <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm border border-dashed border-muted" />Usual pick, shared</span>
+          {rec.usual && <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm border border-dashed border-muted" />Usual pick, shared</span>}
         </div>
       </div>
       <p className="mb-4 text-xs text-muted">Shared plans split this limit with the others on the same plan.</p>
