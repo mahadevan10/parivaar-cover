@@ -30,8 +30,6 @@ Use this family everywhere (seed data, tests, UI placeholders, demo script), so 
   - Mohan, Lata: ₹25L super top-up, ₹10L deductible, ₹16,000
 - **Claim check:** a ₹6L heart procedure for Mohan in year 2 is covered by the mix. With the usual pick, it isn't covered until year 4.
 
-These premiums are **illustrative**, and the UI must say so wherever it shows them.
-
 ## Tech stack
 
 The deck (`stage1_ppt/slide_content.md`, slide 5) planned this stack. For a 6-hour build, use the smallest subset that runs the demo, and record what we actually picked here.

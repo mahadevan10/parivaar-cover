@@ -61,7 +61,6 @@ export type SolverOutput = {
   reason?: "budget" | "rules";
   family_id: string;
   budget: number;
-  illustrative: boolean;
   picks: SolverPick[];
   total_premium: number;
   total_cover: number;
@@ -260,7 +259,6 @@ export function toRecommendation(out: SolverOutput, claimSeries: SolverClaimSeri
 
   return {
     id: id ?? out.id ?? `${out.family_id}-${out.total_premium}`,
-    illustrative: out.illustrative,
     usual,
     mix,
     saving: out.saving_vs_usual,

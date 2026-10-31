@@ -252,7 +252,7 @@ class Changes(unittest.TestCase):
         self.assertEqual(proposal["premiumChange"], expected["total_premium"] - 107000)
         self.assertEqual(next(m for m in proposal["family"]["members"] if m["id"] == "mohan")["age"], 66)
         self.assertTrue(body["reply"].startswith("Mohan's age is now 66."))
-        self.assertIn("Premiums are illustrative.", body["reply"])
+        self.assertNotIn("illustrative", body["reply"])
         self.assertEqual(body["quickReplies"], ["Update my mix", "Keep this mix"])
         # The board keeps the family the mix ran on until the user updates
         self.assertEqual(body["family"]["members"][3]["age"], 64)

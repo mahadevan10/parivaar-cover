@@ -77,6 +77,7 @@ export function Composer({
     onClip,
     onNoSpeech: () => setError("I didn't hear anything. Tap the mic when you're ready."),
     autoStop: handsFree,
+    onBargeIn: () => onMicStart?.(),
   });
 
   const listen = () => {
@@ -92,6 +93,17 @@ export function Composer({
   useEffect(() => {
     if (listenToken > 0) void startRef.current();
   }, [listenToken]);
+
+  // Barge in: in talk mode the mic watches while a reply is read, so the user can cut in.
+  const { recording, armed, cancel } = rec;
+  useEffect(() => {
+    if (handsFree && speaking && !recording && !busy) void startRef.current({ armed: true });
+    // The reply ended without a barge in: record the next turn now.
+    else if (handsFree && !speaking && armed) void startRef.current();
+  }, [handsFree, speaking, recording, busy, armed]);
+  useEffect(() => {
+    if (!handsFree && armed) cancel();
+  }, [handsFree, armed, cancel]);
 
   // Grow the textarea with its content.
   useEffect(() => {

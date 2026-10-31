@@ -268,7 +268,7 @@ EXPLAIN_PROMPT = """You explain a health insurance recommendation to the person 
 The solver chose the policies and worked out every number and reason below. Answer only from these
 facts. Never change a premium, add a reason or suggest a different policy. If the facts do not answer
 the question, say so. Mention catches such as co-pay, waits and sub-limits when they matter.
-All premiums are illustrative. Policy year 1 is the first year after buying, so "next year" is year 2.
+Policy year 1 is the first year after buying, so "next year" is year 2.
 
 Facts, as JSON:
 {facts}
@@ -320,7 +320,7 @@ Convert years to months: 1 year is 12.
 SUMMARY_PROMPT = """You write a short summary of a health insurance recommendation. It sits at the top of the results.
 
 The solver chose the policies and worked out every fact below. Use only these facts. Never add a number,
-a reason or a policy that is not in them. All premiums are illustrative.
+a reason or a policy that is not in them.
 
 Facts, as JSON:
 {facts}
@@ -535,7 +535,6 @@ def quote_change(session_id, old, new, old_solution, unsupported, ask, message):
     if unsupported:
         store.save_expert_request(session_id, new, message, unsupported)
         lines.append(f"For the rest, {EXPERT_LINE[0].lower()}{EXPERT_LINE[1:]}")
-    lines.append("Premiums are illustrative.")
     proposal = dict(draft, family=to_profile(dict(new, budget=family["budget"])), ready=True, premium=premium,
                     premiumChange=diff, raiseBudgetTo=raise_to)
     return " ".join(lines), proposal, quick, bool(unsupported)

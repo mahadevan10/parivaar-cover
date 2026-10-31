@@ -79,7 +79,7 @@ After a recommendation, a message that asks to change something (an age, the bud
 
 ```json
 {
-  "reply": "Mohan's age is now 66. Your mix becomes 5 policies at ₹1,12,000 a year, ₹5,000 more than now. Premiums are illustrative.",
+  "reply": "Mohan's age is now 66. Your mix becomes 5 policies at ₹1,12,000 a year, ₹5,000 more than now.",
   "family": "the request's family, unchanged",
   "quickReplies": ["Update my mix", "Keep this mix"],
   "proposal": {
