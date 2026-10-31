@@ -67,6 +67,54 @@ export type SolverClaimSeries = {
   by_year: { policy_year: number; mix: SolverClaim; usual: SolverClaim | null }[];
 };
 
+/** A claim to run in /recommend. The backend checks it for policy years 1 to 4. */
+export type SolverClaimRequest = {
+  id: string;
+  label: string;
+  member_id: string;
+  amount: number;
+  related_condition?: string;
+  treatment?: string;
+};
+
+const HEART_RISK = new Set(["diabetes", "hypertension", "heart_disease"]);
+
+/**
+ * Claims for the claim check. Without these the backend only runs condition claims and
+ * one cancer claim, so a family with no conditions gets a single scenario.
+ */
+export function claimsFor(family: SolverFamily): SolverClaimRequest[] {
+  const claims: SolverClaimRequest[] = [];
+  for (const m of family.members) {
+    const condition = m.conditions[0];
+    if (!condition) continue;
+    const heart = HEART_RISK.has(condition);
+    claims.push({
+      id: `${m.id}-${heart ? "heart" : "hospital"}`,
+      label: heart ? "Heart procedure" : "Hospital stay",
+      member_id: m.id,
+      amount: 600_000,
+      related_condition: condition,
+      treatment: heart ? "cardiac" : undefined,
+    });
+  }
+
+  const byAge = family.members.filter((m) => m.age !== undefined).sort((a, b) => b.age! - a.age!);
+  const eldest = byAge[0];
+  // Knee surgery is a listed illness, so it shows the 2-year wait most policies have.
+  if (eldest && eldest.age! >= 45) {
+    claims.push({ id: `${eldest.id}-knee`, label: "Knee surgery", member_id: eldest.id, amount: 350_000, treatment: "knee" });
+  }
+  const youngest = byAge[byAge.length - 1];
+  if (youngest && youngest.age! < 18) {
+    claims.push({ id: `${youngest.id}-dengue`, label: "Dengue hospital stay", member_id: youngest.id, amount: 150_000 });
+  }
+
+  const first = family.members[0];
+  claims.push({ id: `${first.id}-cancer`, label: "Cancer treatment", member_id: first.id, amount: 3_000_000 });
+  return claims;
+}
+
 const SPOUSE = new Set(["wife", "husband", "spouse"]);
 
 export function toSolverFamily(family: FamilyProfile, id: string): SolverFamily {

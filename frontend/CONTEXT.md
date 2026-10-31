@@ -2,10 +2,12 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, branch `fe/no-usual-pick`._
+_Last updated: 2026-10-31, branch `fe/optimise-progress`._
 
 ## Status
 
+- The optimise screen now follows the real request. "Testing combinations" keeps spinning until `/recommend` answers, then the last two checks tick, a "Done" line shows, and the results open. After 6 seconds a "Still working" note appears. Tested in the browser: the demo family takes 3.5 seconds end to end; a family of 8 took about 61 seconds and waited correctly.
+- Fixed a duplicate React key warning when the mix holds the same product twice (big families get two Super Surplus Gold top-ups).
 - Families with no single floater now work. When a parent is past the floaters' entry age (Mohan at 70, say), the backend sends `usual_pick: null`. The UI used to crash on that and say "I couldn't reach the optimiser". Now it shows the mix with a "No single floater fits" card. Tested in the browser.
 - The dev page works at `127.0.0.1:3000` and from phones on the same Wi-Fi (`allowedDevOrigins` in `next.config.ts`). Before, it rendered but never hydrated, so no button worked. The backend CORS allows the same origins (backend #11).
 - `findMix` logs the real error to the console before showing the generic message.
@@ -33,19 +35,20 @@ _Last updated: 2026-10-31, branch `fe/no-usual-pick`._
 | Show solver `reasons`, `next_best` and `vs_usual` text as is | The solver states the facts; the UI and LLM only present them, which keeps the core rule. |
 | Policy citations open a "fine print" sheet built from the pick's own fields | The data has no clause text yet. Every sheet says it is from public brochures and not yet checked against the wording. |
 | `usual` and `saving` on `Recommendation` are nullable; no made-up comparison when no single floater fits | The solver has nothing to compare with, and inventing a usual pick would show a fake price. |
+| Optimise steps are paced by the real `/recommend` call; the solver's answer is held in `pending` until every step ticks | The old fixed timer ticked everything in 2.4 seconds, then sat still while big families took up to a minute. |
 | Condition names follow `shared/README.md` (`hypertension`, `heart_disease`); the UI shows friendly labels | The solver matches conditions by name. |
 
 ## Next
 
 1. Test voice and chat in Hindi and Hinglish. English chat intake works.
 2. Rewrite the demo script for real numbers: Mohan's year 2 heart claim is partly covered (₹1,80,000 co-pay).
-3. Demo polish: phone layout, timing of the optimise animation, read-aloud with Sarvam Bulbul if time allows.
+3. Demo polish: phone layout, read-aloud with Sarvam Bulbul if time allows.
 4. Whenever `backend/solver.py` changes, rerun `python3 frontend/scripts/gen_claim_checks.py` so the mock matches.
 
 ## Open questions
 
 - Unknown health conditions: suggested the backend treats them as a general pre-existing condition. Backend's call.
-- Families of 8 or more take about 18 seconds in `/recommend` (7 take about 3). The optimise screen just waits. Fine for the demo family; worth a timeout message if we show bigger families.
+- Families of 8 can take about a minute in `/recommend` (the demo family plus people aged 40, 12 and 58 took 61 seconds; the backend runs CP-SAT at full CPU). The UI now says it is still working, but there is no timeout or cancel. Worth asking the backend for a solver time limit.
 
 ## Run
 
