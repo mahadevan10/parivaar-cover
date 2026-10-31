@@ -10,7 +10,8 @@ import uuid
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 import llm
 import solver
@@ -22,7 +23,6 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000"],
 POLICIES = solver.load_policies()
 RECOMMENDATIONS = {}  # id -> /recommend response, kept in memory for follow-up chat
 CLAIM_YEARS = range(1, 5)
-DEFAULT_CLAIM_AMOUNT = 600_000
 
 CONDITION_NAMES = {
     "diabetes": ["diabetes", "diabetic", "sugar", "blood sugar", "type 2 diabetes", "type 1 diabetes"],
@@ -31,7 +31,6 @@ CONDITION_NAMES = {
     "heart_disease": ["heart_disease", "heart disease", "heart problem", "cardiac"],
 }
 CONDITION_TREATMENT = {"diabetes": "cardiac", "hypertension": "cardiac", "heart_disease": "cardiac"}
-TREATMENT_LABEL = {"cardiac": "heart procedure"}
 
 
 # Request shapes. They follow shared/families.json, so the solver reads them as they are.
@@ -58,6 +57,8 @@ class Family(BaseModel):
 
 
 class Claim(BaseModel):
+    id: str | None = None
+    label: str | None = None
     member_id: str
     amount: int = Field(gt=0)
     related_condition: str | None = None
@@ -69,14 +70,18 @@ class RecommendRequest(BaseModel):
     claims: list[Claim] | None = None
 
 
+# /chat uses the frontend's camelCase shapes (frontend/docs/api-contract.md)
+
 class ChatTurn(BaseModel):
     role: str
-    content: str
+    text: str
 
 
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    session_id: str | None = None
     message: str
-    family: dict = {}  # partial while the user is still telling us about the family
+    family: dict = {}  # the UI's FamilyProfile, partial while the user is still talking
     history: list[ChatTurn] = []
     recommendation_id: str | None = None
 
@@ -94,46 +99,58 @@ def recommend(req: RecommendRequest):
         if claim.member_id not in ids:
             raise HTTPException(422, f"Unknown member in claims: {claim.member_id}")
 
-    result = solver.solve(family, POLICIES)
-    result["id"] = "rec-" + uuid.uuid4().hex[:8]
-    result["claim_checks"] = []
-    if result["status"] == "ok":
+    solution = solver.solve(family, POLICIES)
+    solution["id"] = "rec-" + uuid.uuid4().hex[:8]
+    claim_checks = []
+    if solution["status"] == "ok":
         claims = [c.model_dump() for c in req.claims] if req.claims is not None else default_claims(family)
-        result["claim_checks"] = [claim_by_year(family, result, c) for c in claims]
-    RECOMMENDATIONS[result["id"]] = result
-    return result
+        claim_checks = [claim_by_year(family, solution, c) for c in claims]
+    rec = {"id": solution["id"], "solution": solution, "claim_checks": claim_checks}
+    RECOMMENDATIONS[rec["id"]] = rec
+    if solution["status"] == "ok":
+        # The frontend builds its own id this way (toRecommendation in frontend/src/lib/solver.ts)
+        RECOMMENDATIONS[f"{solution['family_id']}-{solution['total_premium']}"] = rec
+    return rec
 
 
 def default_claims(family):
-    """A ₹6L claim for each member with a known condition, like the deck's claim check."""
+    """The deck's ₹6L heart claim for each member with a known condition, and one large claim
+    for the first member, so the claim check shows what the top-ups are for."""
     claims = []
     for m in family["members"]:
         if m["conditions"]:
             condition = m["conditions"][0]
-            claims.append({"member_id": m["id"], "amount": DEFAULT_CLAIM_AMOUNT,
-                           "related_condition": condition, "treatment": CONDITION_TREATMENT.get(condition)})
+            treatment = CONDITION_TREATMENT.get(condition)
+            claims.append({"id": f"{m['id']}-{treatment or 'hospital'}", "member_id": m["id"], "amount": 600_000,
+                           "label": "Heart procedure" if treatment else "Hospital stay",
+                           "related_condition": condition, "treatment": treatment})
+    first = family["members"][0]["id"]
+    claims.append({"id": f"{first}-cancer", "member_id": first, "amount": 3_000_000,
+                   "label": "Cancer treatment", "related_condition": None, "treatment": None})
     return claims
 
 
-def claim_by_year(family, result, claim):
-    name = next(m["name"] for m in family["members"] if m["id"] == claim["member_id"])
-    what = TREATMENT_LABEL.get(claim["treatment"], "hospital stay")
+def claim_by_year(family, solution, claim):
     by_year = []
     for year in CLAIM_YEARS:
         args = (claim["member_id"], claim["amount"], year, claim["related_condition"], claim["treatment"])
-        usual = result["usual_pick"]
+        usual = solution["usual_pick"]
         by_year.append({
-            "year": year,
-            "mix": solver.claim_check(family, result["picks"], *args),
+            "policy_year": year,
+            "mix": solver.claim_check(family, solution["picks"], *args),
             "usual": solver.claim_check(family, [usual], *args) if usual else None,
         })
-    return dict(claim, label=f"{solver.inr(claim['amount'])} {what} for {name}", by_year=by_year)
+    claim = dict(claim, by_year=by_year)
+    claim["id"] = claim["id"] or f"{claim['member_id']}-{claim['amount']}"
+    claim["label"] = claim["label"] or "Hospital stay"
+    return claim
 
 
 # Chat
 
 STYLE = ("Write plain, short sentences in sentence case. Do not use em or en dashes. "
-         "Do not use hype words. Reply in the language the user writes in.")
+         "Do not use hype words. Reply in the language the user writes in. "
+         "Write money with the rupee sign and Indian grouping, like ₹1,10,000.")
 
 INTAKE_PROMPT = """You help one person insure their family's health. Collect the family's details.
 
@@ -169,7 +186,6 @@ The solver chose the policies and worked out every number and reason below. Answ
 facts. Never change a premium, add a reason or suggest a different policy. If the facts do not answer
 the question, say so. Mention catches such as co-pay, waits and sub-limits when they matter.
 All premiums are illustrative. Policy year 1 is the first year after buying, so "next year" is year 2.
-Write money with the rupee sign and Indian grouping, like ₹1,80,000.
 
 Facts, as JSON:
 {facts}
@@ -181,19 +197,21 @@ Return only a JSON object:
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-    history = [t.model_dump() for t in req.history] + [{"role": "user", "content": req.message}]
+    history = [{"role": t.role, "content": t.text} for t in req.history] + [{"role": "user", "content": req.message}]
     if req.recommendation_id:
         rec = RECOMMENDATIONS.get(req.recommendation_id)
         if rec is None:
             raise HTTPException(404, "Recommendation not found. Run /recommend again.")
         out = call_llm(EXPLAIN_PROMPT.format(facts=json.dumps(explain_facts(rec), ensure_ascii=False)), history)
-        known = {p["policy_id"] for p in rec.get("picks", [])}
-        if rec.get("usual_pick"):
-            known.add(rec["usual_pick"]["policy_id"])
-        return {"reply": tidy(out.get("reply", "")), "family": req.family,
-                "citations": [c for c in out.get("citations", []) if c in known]}
+        solution = rec["solution"]
+        known = {p["policy_id"] for p in solution.get("picks", [])}
+        if solution.get("usual_pick"):
+            known.add(solution["usual_pick"]["policy_id"])
+        return {"reply": tidy(out.get("reply", "")), "family": req.family, "missing": [], "quickReplies": [],
+                "readyToOptimise": True, "citations": list(dict.fromkeys(c for c in out.get("citations", []) if c in known))}
 
-    family = clean_family(req.family, req.family)
+    before = from_profile(req.family)
+    family = clean_family(before, before)
     out = call_llm(INTAKE_PROMPT.format(family=json.dumps(family, ensure_ascii=False),
                                         missing=", ".join(missing_details(family)) or "nothing"), history)
     new = dict(out.get("family") or {})
@@ -207,7 +225,49 @@ def chat(req: ChatRequest):
             reply = re.sub(rf"\b{re.escape(proper)}\b", proper, reply, flags=re.IGNORECASE)
     if "?" not in reply:
         reply = f"{reply} {next_question(missing[0]) if missing else 'I have everything I need to find your options.'}"
-    return {"reply": reply, "family": family, "missing": missing, "ready": not missing}
+    for m in family["members"]:
+        old = next((o for o in before.get("members", []) if o.get("id") == m["id"]), None)
+        if old is None or any(old.get(k) != m[k] for k in ("age", "relation", "conditions")):
+            m["heard_from"] = req.message
+    return {"reply": reply, "family": to_profile(family), "missing": missing,
+            "quickReplies": quick_replies(family, missing), "readyToOptimise": not missing}
+
+
+def from_profile(p):
+    """The UI's camelCase FamilyProfile in the shared snake_case format."""
+    office = p.get("officeCover")
+    return {
+        "city": p.get("city"), "budget": p.get("budget"),
+        "members": [{"id": m.get("id"), "name": m.get("name"), "age": m.get("age"), "relation": m.get("relation"),
+                     "conditions": m.get("conditions") or [], "heard_from": m.get("heardFrom")}
+                    for m in p.get("members") or []],
+        "office_cover": [{"members": office.get("memberIds") or [], "sum_insured": office.get("amount")}] if office else [],
+        "health_checked": p.get("healthChecked", False), "office_checked": p.get("officeChecked", False),
+    }
+
+
+def to_profile(f):
+    office = f["office_cover"][0] if f["office_cover"] else None
+    profile = {
+        "members": [{"id": m["id"], "name": m["name"], "relation": m["relation"], "age": m["age"],
+                     "conditions": m["conditions"], "heardFrom": m.get("heard_from")} for m in f["members"]],
+        "city": f["city"], "budget": f["budget"],
+        "healthChecked": f["health_checked"], "officeChecked": f["office_checked"],
+    }
+    if office:
+        profile["officeCover"] = {"amount": office["sum_insured"], "memberIds": office["members"]}
+    return profile
+
+
+def quick_replies(family, missing):
+    if not missing:
+        return []
+    if missing[0] == "Health conditions":
+        anyone = any(m["conditions"] for m in family["members"])
+        return ["No one else has one" if anyone else "No one has a condition"]
+    if missing[0] == "Office cover":
+        return ["No office cover"]
+    return []
 
 
 NEXT_QUESTION = {
@@ -239,6 +299,7 @@ def call_llm(system, history):
 
 def explain_facts(rec):
     """The parts of a recommendation the explainer may use."""
+    claim_checks, rec = rec["claim_checks"], rec["solution"]
     if rec["status"] != "ok":
         return {"status": rec["status"], "budget": rec["budget"], "message": rec["message"]}
     keep = ("policy_id", "insurer", "product", "plan_type", "members", "sum_insured", "deductible",
@@ -250,9 +311,9 @@ def explain_facts(rec):
         "picks": [{k: p[k] for k in keep} for p in rec["picks"]],
         "usual_pick": {k: usual[k] for k in keep if k in usual} if usual else None,
         "vs_usual": [r["text"] for r in rec["vs_usual"]],
-        "claim_checks": [{"label": c["label"], "by_year": [
-            {"year": y["year"], "mix": y["mix"], "usual": y["usual"]} for y in c["by_year"]]}
-            for c in rec["claim_checks"]],
+        "claim_checks": [{"label": c["label"], "member_id": c["member_id"], "amount": c["amount"], "by_year": [
+            {"policy_year": y["policy_year"], "mix": y["mix"], "usual": y["usual"]} for y in c["by_year"]]}
+            for c in claim_checks],
     }
 
 
@@ -289,8 +350,10 @@ def clean_family(raw, previous):
         for c in m.get("conditions") or []:
             if condition_name(c) and condition_name(c) not in conditions:
                 conditions.append(condition_name(c))
+        old = next((o for o in previous.get("members", []) if o.get("id") == mid), {})
         members.append({"id": mid, "name": name, "age": as_int(m.get("age")),
-                        "relation": m.get("relation"), "conditions": conditions})
+                        "relation": m.get("relation"), "conditions": conditions,
+                        "heard_from": m.get("heard_from") or old.get("heard_from")})
     office = []
     for oc in raw.get("office_cover") or []:
         amount, who = as_int(oc.get("sum_insured")), [mid for mid in oc.get("members") or [] if mid in seen]
@@ -325,7 +388,8 @@ def has_word(text, word):
 
 
 def mentions(text, member):
-    words = [member["name"].lower()] + RELATION_WORDS.get(member.get("relation") or "", [])
+    relation = (member.get("relation") or "").lower()
+    words = [member["name"].lower()] + RELATION_WORDS.get(relation, []) + ([relation] if relation and relation != "self" else [])
     return any(has_word(text, w) for w in words)
 
 
