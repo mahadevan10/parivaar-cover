@@ -1,0 +1,53 @@
+{
+  "note": "Mock families for testing. The first one is the demo family from the deck.",
+  "families": [
+    {
+      "id": "demo-pune",
+      "city": "Pune",
+      "budget": 110000,
+      "members": [
+        {"id": "rahul", "name": "Rahul", "age": 36, "relation": "self", "conditions": []},
+        {"id": "sneha", "name": "Sneha", "age": 33, "relation": "spouse", "conditions": []},
+        {"id": "aarav", "name": "Aarav", "age": 6, "relation": "son", "conditions": []},
+        {"id": "mohan", "name": "Mohan", "age": 64, "relation": "father", "conditions": ["diabetes"]},
+        {"id": "lata", "name": "Lata", "age": 60, "relation": "mother", "conditions": []}
+      ],
+      "office_cover": []
+    },
+    {
+      "id": "young-couple-bengaluru",
+      "city": "Bengaluru",
+      "budget": 30000,
+      "members": [
+        {"id": "arjun", "name": "Arjun", "age": 29, "relation": "self", "conditions": []},
+        {"id": "meera", "name": "Meera", "age": 27, "relation": "spouse", "conditions": []}
+      ],
+      "office_cover": []
+    },
+    {
+      "id": "single-parent-chennai",
+      "city": "Chennai",
+      "budget": 90000,
+      "members": [
+        {"id": "priya", "name": "Priya", "age": 42, "relation": "self", "conditions": ["hypertension"]},
+        {"id": "kavin", "name": "Kavin", "age": 10, "relation": "son", "conditions": []},
+        {"id": "ramesh", "name": "Ramesh", "age": 70, "relation": "father", "conditions": ["hypertension"]}
+      ],
+      "office_cover": []
+    },
+    {
+      "id": "office-cover-lucknow",
+      "city": "Lucknow",
+      "budget": 75000,
+      "members": [
+        {"id": "imran", "name": "Imran", "age": 45, "relation": "self", "conditions": []},
+        {"id": "ayesha", "name": "Ayesha", "age": 41, "relation": "spouse", "conditions": ["asthma"]},
+        {"id": "zoya", "name": "Zoya", "age": 12, "relation": "daughter", "conditions": []},
+        {"id": "farida", "name": "Farida", "age": 67, "relation": "mother", "conditions": []}
+      ],
+      "office_cover": [
+        {"members": ["imran", "ayesha", "zoya"], "sum_insured": 500000}
+      ]
+    }
+  ]
+}

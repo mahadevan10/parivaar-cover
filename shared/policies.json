@@ -1,0 +1,2691 @@
+{
+  "note": "Policy features follow public brochures and aggregator pages as of 2026-10-31 and are not verified against policy wordings. Premiums are illustrative, not insurer quotes.",
+  "policies": [
+    {
+      "id": "star-comprehensive-25l-floater",
+      "insurer": "Star Health",
+      "product": "Star Comprehensive",
+      "plan_type": "floater",
+      "sum_insured": 2500000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 16000
+          },
+          {
+            "max_age": 25,
+            "amount": 20300
+          },
+          {
+            "max_age": 35,
+            "amount": 24600
+          },
+          {
+            "max_age": 40,
+            "amount": 29000
+          },
+          {
+            "max_age": 45,
+            "amount": 36200
+          },
+          {
+            "max_age": 50,
+            "amount": 46400
+          },
+          {
+            "max_age": 55,
+            "amount": 60900
+          },
+          {
+            "max_age": 60,
+            "amount": 78300
+          },
+          {
+            "max_age": 65,
+            "amount": 85000
+          },
+          {
+            "max_age": 70,
+            "amount": 127600
+          },
+          {
+            "max_age": 75,
+            "amount": 150800
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 11000
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+        "One cover is shared by everyone on the policy."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-comprehensive-10l-floater",
+      "insurer": "Star Health",
+      "product": "Star Comprehensive",
+      "plan_type": "floater",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 11600
+          },
+          {
+            "max_age": 25,
+            "amount": 14700
+          },
+          {
+            "max_age": 35,
+            "amount": 17800
+          },
+          {
+            "max_age": 40,
+            "amount": 21000
+          },
+          {
+            "max_age": 45,
+            "amount": 26200
+          },
+          {
+            "max_age": 50,
+            "amount": 33600
+          },
+          {
+            "max_age": 55,
+            "amount": 44100
+          },
+          {
+            "max_age": 60,
+            "amount": 56700
+          },
+          {
+            "max_age": 65,
+            "amount": 75600
+          },
+          {
+            "max_age": 70,
+            "amount": 92400
+          },
+          {
+            "max_age": 75,
+            "amount": 109200
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 3500
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+        "One cover is shared by everyone on the policy."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-comprehensive-10l",
+      "insurer": "Star Health",
+      "product": "Star Comprehensive",
+      "plan_type": "individual",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 5900
+          },
+          {
+            "max_age": 25,
+            "amount": 7600
+          },
+          {
+            "max_age": 35,
+            "amount": 9200
+          },
+          {
+            "max_age": 40,
+            "amount": 10800
+          },
+          {
+            "max_age": 45,
+            "amount": 13500
+          },
+          {
+            "max_age": 50,
+            "amount": 17300
+          },
+          {
+            "max_age": 55,
+            "amount": 22700
+          },
+          {
+            "max_age": 60,
+            "amount": 29200
+          },
+          {
+            "max_age": 65,
+            "amount": 38900
+          },
+          {
+            "max_age": 70,
+            "amount": 47500
+          },
+          {
+            "max_age": 75,
+            "amount": 56200
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-young-star-gold-10l-floater",
+      "insurer": "Star Health",
+      "product": "Young Star Gold",
+      "plan_type": "floater",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 40
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 9900
+          },
+          {
+            "max_age": 25,
+            "amount": 12600
+          },
+          {
+            "max_age": 35,
+            "amount": 15300
+          },
+          {
+            "max_age": 40,
+            "amount": 18000
+          },
+          {
+            "max_age": 45,
+            "amount": 22500
+          },
+          {
+            "max_age": 50,
+            "amount": 28800
+          },
+          {
+            "max_age": 55,
+            "amount": 37800
+          },
+          {
+            "max_age": 60,
+            "amount": 48600
+          },
+          {
+            "max_age": 65,
+            "amount": 64800
+          },
+          {
+            "max_age": 70,
+            "amount": 79200
+          },
+          {
+            "max_age": 75,
+            "amount": 93600
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 3000
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Adults can join only up to age 40.",
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+        "One cover is shared by everyone on the policy."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-young-star-gold-5l-floater",
+      "insurer": "Star Health",
+      "product": "Young Star Gold",
+      "plan_type": "floater",
+      "sum_insured": 500000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 40
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 6600
+          },
+          {
+            "max_age": 25,
+            "amount": 8400
+          },
+          {
+            "max_age": 35,
+            "amount": 10200
+          },
+          {
+            "max_age": 40,
+            "amount": 12000
+          },
+          {
+            "max_age": 45,
+            "amount": 15000
+          },
+          {
+            "max_age": 50,
+            "amount": 19200
+          },
+          {
+            "max_age": 55,
+            "amount": 25200
+          },
+          {
+            "max_age": 60,
+            "amount": 32400
+          },
+          {
+            "max_age": 65,
+            "amount": 43200
+          },
+          {
+            "max_age": 70,
+            "amount": 52800
+          },
+          {
+            "max_age": 75,
+            "amount": 62400
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 2000
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Adults can join only up to age 40.",
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-family-health-optima-10l-floater",
+      "insurer": "Star Health",
+      "product": "Family Health Optima",
+      "plan_type": "floater",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 10700
+          },
+          {
+            "max_age": 25,
+            "amount": 13600
+          },
+          {
+            "max_age": 35,
+            "amount": 16600
+          },
+          {
+            "max_age": 40,
+            "amount": 19500
+          },
+          {
+            "max_age": 45,
+            "amount": 24400
+          },
+          {
+            "max_age": 50,
+            "amount": 31200
+          },
+          {
+            "max_age": 55,
+            "amount": 41000
+          },
+          {
+            "max_age": 60,
+            "amount": 52600
+          },
+          {
+            "max_age": 65,
+            "amount": 70200
+          },
+          {
+            "max_age": 70,
+            "amount": 85800
+          },
+          {
+            "max_age": 75,
+            "amount": 101400
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 3000
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+        "One cover is shared by everyone on the policy."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-medi-classic-gold-10l",
+      "insurer": "Star Health",
+      "product": "Medi Classic Gold",
+      "plan_type": "individual",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 5400
+          },
+          {
+            "max_age": 25,
+            "amount": 6900
+          },
+          {
+            "max_age": 35,
+            "amount": 8300
+          },
+          {
+            "max_age": 40,
+            "amount": 9800
+          },
+          {
+            "max_age": 45,
+            "amount": 12200
+          },
+          {
+            "max_age": 50,
+            "amount": 15700
+          },
+          {
+            "max_age": 55,
+            "amount": 20600
+          },
+          {
+            "max_age": 60,
+            "amount": 26500
+          },
+          {
+            "max_age": 65,
+            "amount": 35300
+          },
+          {
+            "max_age": 70,
+            "amount": 43100
+          },
+          {
+            "max_age": 75,
+            "amount": 51000
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-red-carpet-10l",
+      "insurer": "Star Health",
+      "product": "Senior Citizens Red Carpet",
+      "plan_type": "senior",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 60,
+        "max": 75
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 60,
+            "amount": 30800
+          },
+          {
+            "max_age": 65,
+            "amount": 41000
+          },
+          {
+            "max_age": 70,
+            "amount": 50200
+          },
+          {
+            "max_age": 75,
+            "amount": 59300
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 30,
+      "room_rent": {
+        "capped": true,
+        "text": "Room rent up to 1% of the cover, at most ₹4,000 a day."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 12
+      },
+      "condition_waits_months": {},
+      "sub_limits": [
+        {
+          "item": "cardiac",
+          "text": "Heart treatment has a sub-limit. Check the policy wording for the amount."
+        },
+        {
+          "item": "cataract",
+          "text": "Cataract has a sub-limit. Check the policy wording for the amount."
+        }
+      ],
+      "catches": [
+        "Illnesses you already have are covered after 1 year.",
+        "You pay 30% of every claim.",
+        "Room rent is capped at 1% of the cover, at most ₹4,000 a day.",
+        "Heart treatment, cataract, stroke, cancer and fractures have sub-limits."
+      ],
+      "source": "https://joinditto.in/health-insurance/compare-plans/comprehensive-vs-red-carpet-senior-citizens/",
+      "verified": false
+    },
+    {
+      "id": "star-red-carpet-15l",
+      "insurer": "Star Health",
+      "product": "Senior Citizens Red Carpet",
+      "plan_type": "senior",
+      "sum_insured": 1500000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 60,
+        "max": 75
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 60,
+            "amount": 40500
+          },
+          {
+            "max_age": 65,
+            "amount": 54000
+          },
+          {
+            "max_age": 70,
+            "amount": 66000
+          },
+          {
+            "max_age": 75,
+            "amount": 78000
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 30,
+      "room_rent": {
+        "capped": true,
+        "text": "Room rent up to 1% of the cover, at most ₹4,000 a day."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 12
+      },
+      "condition_waits_months": {},
+      "sub_limits": [
+        {
+          "item": "cardiac",
+          "text": "Heart treatment has a sub-limit. Check the policy wording for the amount."
+        }
+      ],
+      "catches": [
+        "Illnesses you already have are covered after 1 year.",
+        "You pay 30% of every claim.",
+        "Room rent is capped at 1% of the cover, at most ₹4,000 a day."
+      ],
+      "source": "https://joinditto.in/health-insurance/compare-plans/comprehensive-vs-red-carpet-senior-citizens/",
+      "verified": false
+    },
+    {
+      "id": "star-arogya-sanjeevani-10l",
+      "insurer": "Star Health",
+      "product": "Arogya Sanjeevani",
+      "plan_type": "individual",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 4400
+          },
+          {
+            "max_age": 25,
+            "amount": 5600
+          },
+          {
+            "max_age": 35,
+            "amount": 6800
+          },
+          {
+            "max_age": 40,
+            "amount": 8000
+          },
+          {
+            "max_age": 45,
+            "amount": 10000
+          },
+          {
+            "max_age": 50,
+            "amount": 12800
+          },
+          {
+            "max_age": 55,
+            "amount": 16800
+          },
+          {
+            "max_age": 60,
+            "amount": 21600
+          },
+          {
+            "max_age": 65,
+            "amount": 28800
+          },
+          {
+            "max_age": 70,
+            "amount": 35200
+          },
+          {
+            "max_age": 75,
+            "amount": 41600
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 5,
+      "room_rent": {
+        "capped": true,
+        "text": "Room rent up to 2% of the cover, at most ₹5,000 a day. ICU up to 5%, at most ₹10,000 a day."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [
+        {
+          "item": "cataract",
+          "text": "Cataract is paid up to 25% of the cover or ₹40,000 an eye, whichever is lower."
+        }
+      ],
+      "catches": [
+        "You pay 5% of every claim.",
+        "Room rent is capped at 2% of the cover, at most ₹5,000 a day.",
+        "Illnesses you already have are covered only after 3 years."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-super-surplus-gold-25l-10l",
+      "insurer": "Star Health",
+      "product": "Super Surplus Gold",
+      "plan_type": "super_topup",
+      "sum_insured": 2500000,
+      "deductible": 1000000,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 1500
+          },
+          {
+            "max_age": 25,
+            "amount": 1900
+          },
+          {
+            "max_age": 35,
+            "amount": 2300
+          },
+          {
+            "max_age": 40,
+            "amount": 2700
+          },
+          {
+            "max_age": 45,
+            "amount": 3800
+          },
+          {
+            "max_age": 50,
+            "amount": 5400
+          },
+          {
+            "max_age": 55,
+            "amount": 8100
+          },
+          {
+            "max_age": 60,
+            "amount": 11300
+          },
+          {
+            "max_age": 65,
+            "amount": 16700
+          },
+          {
+            "max_age": 70,
+            "amount": 20200
+          },
+          {
+            "max_age": 75,
+            "amount": 24300
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 500
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered only after 3 years."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-super-surplus-gold-50l-10l",
+      "insurer": "Star Health",
+      "product": "Super Surplus Gold",
+      "plan_type": "super_topup",
+      "sum_insured": 5000000,
+      "deductible": 1000000,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 2100
+          },
+          {
+            "max_age": 25,
+            "amount": 2700
+          },
+          {
+            "max_age": 35,
+            "amount": 3200
+          },
+          {
+            "max_age": 40,
+            "amount": 3800
+          },
+          {
+            "max_age": 45,
+            "amount": 5300
+          },
+          {
+            "max_age": 50,
+            "amount": 7600
+          },
+          {
+            "max_age": 55,
+            "amount": 11400
+          },
+          {
+            "max_age": 60,
+            "amount": 16000
+          },
+          {
+            "max_age": 65,
+            "amount": 23600
+          },
+          {
+            "max_age": 70,
+            "amount": 28500
+          },
+          {
+            "max_age": 75,
+            "amount": 34200
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 700
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered only after 3 years."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "star-super-surplus-gold-1cr-10l",
+      "insurer": "Star Health",
+      "product": "Super Surplus Gold",
+      "plan_type": "super_topup",
+      "sum_insured": 10000000,
+      "deductible": 1000000,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 3300
+          },
+          {
+            "max_age": 25,
+            "amount": 4200
+          },
+          {
+            "max_age": 35,
+            "amount": 5100
+          },
+          {
+            "max_age": 40,
+            "amount": 6000
+          },
+          {
+            "max_age": 45,
+            "amount": 8400
+          },
+          {
+            "max_age": 50,
+            "amount": 12000
+          },
+          {
+            "max_age": 55,
+            "amount": 18000
+          },
+          {
+            "max_age": 60,
+            "amount": 25200
+          },
+          {
+            "max_age": 65,
+            "amount": 37200
+          },
+          {
+            "max_age": 70,
+            "amount": 45000
+          },
+          {
+            "max_age": 75,
+            "amount": 54000
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 1000
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered only after 3 years."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "verified": false
+    },
+    {
+      "id": "cigna-prohealth-prime-protect-10l",
+      "insurer": "ManipalCigna",
+      "product": "ProHealth Prime Protect",
+      "plan_type": "individual",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 5300
+          },
+          {
+            "max_age": 25,
+            "amount": 6800
+          },
+          {
+            "max_age": 35,
+            "amount": 8200
+          },
+          {
+            "max_age": 40,
+            "amount": 9700
+          },
+          {
+            "max_age": 45,
+            "amount": 12100
+          },
+          {
+            "max_age": 50,
+            "amount": 15500
+          },
+          {
+            "max_age": 55,
+            "amount": 20400
+          },
+          {
+            "max_age": 60,
+            "amount": 26200
+          },
+          {
+            "max_age": 65,
+            "amount": 34900
+          },
+          {
+            "max_age": 70,
+            "amount": 42700
+          },
+          {
+            "max_age": 75,
+            "amount": 50400
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://www.manipalcigna.com/health-insurance",
+      "verified": false
+    },
+    {
+      "id": "cigna-prohealth-prime-protect-10l-floater",
+      "insurer": "ManipalCigna",
+      "product": "ProHealth Prime Protect",
+      "plan_type": "floater",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 11000
+          },
+          {
+            "max_age": 25,
+            "amount": 14000
+          },
+          {
+            "max_age": 35,
+            "amount": 17000
+          },
+          {
+            "max_age": 40,
+            "amount": 20000
+          },
+          {
+            "max_age": 45,
+            "amount": 25000
+          },
+          {
+            "max_age": 50,
+            "amount": 32000
+          },
+          {
+            "max_age": 55,
+            "amount": 42000
+          },
+          {
+            "max_age": 60,
+            "amount": 54000
+          },
+          {
+            "max_age": 65,
+            "amount": 72000
+          },
+          {
+            "max_age": 70,
+            "amount": 88000
+          },
+          {
+            "max_age": 75,
+            "amount": 104000
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 3500
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+        "One cover is shared by everyone on the policy."
+      ],
+      "source": "https://www.manipalcigna.com/health-insurance",
+      "verified": false
+    },
+    {
+      "id": "cigna-prohealth-prime-advantage-25l",
+      "insurer": "ManipalCigna",
+      "product": "ProHealth Prime Advantage",
+      "plan_type": "individual",
+      "sum_insured": 2500000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 7200
+          },
+          {
+            "max_age": 25,
+            "amount": 9100
+          },
+          {
+            "max_age": 35,
+            "amount": 11000
+          },
+          {
+            "max_age": 40,
+            "amount": 13000
+          },
+          {
+            "max_age": 45,
+            "amount": 16200
+          },
+          {
+            "max_age": 50,
+            "amount": 20800
+          },
+          {
+            "max_age": 55,
+            "amount": 27300
+          },
+          {
+            "max_age": 60,
+            "amount": 35100
+          },
+          {
+            "max_age": 65,
+            "amount": 46800
+          },
+          {
+            "max_age": 70,
+            "amount": 57200
+          },
+          {
+            "max_age": 75,
+            "amount": 67600
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://www.manipalcigna.com/health-insurance",
+      "verified": false
+    },
+    {
+      "id": "cigna-lifetime-health-50l",
+      "insurer": "ManipalCigna",
+      "product": "Lifetime Health",
+      "plan_type": "individual",
+      "sum_insured": 5000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 9900
+          },
+          {
+            "max_age": 25,
+            "amount": 12600
+          },
+          {
+            "max_age": 35,
+            "amount": 15300
+          },
+          {
+            "max_age": 40,
+            "amount": 18000
+          },
+          {
+            "max_age": 45,
+            "amount": 22500
+          },
+          {
+            "max_age": 50,
+            "amount": 28800
+          },
+          {
+            "max_age": 55,
+            "amount": 37800
+          },
+          {
+            "max_age": 60,
+            "amount": 48600
+          },
+          {
+            "max_age": 65,
+            "amount": 64800
+          },
+          {
+            "max_age": 70,
+            "amount": 79200
+          },
+          {
+            "max_age": 75,
+            "amount": 93600
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://www.manipalcigna.com/health-insurance",
+      "verified": false
+    },
+    {
+      "id": "cigna-prime-senior-classic-10l",
+      "insurer": "ManipalCigna",
+      "product": "Prime Senior Classic",
+      "plan_type": "senior",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 56,
+        "max": 75
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 60,
+            "amount": 34000
+          },
+          {
+            "max_age": 65,
+            "amount": 46000
+          },
+          {
+            "max_age": 70,
+            "amount": 55000
+          },
+          {
+            "max_age": 75,
+            "amount": 65000
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 24
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered after 2 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://joinditto.in/health-insurance/manipal-cigna/prohealth-prime-senior-elite",
+      "verified": false
+    },
+    {
+      "id": "cigna-prime-senior-elite-10l",
+      "insurer": "ManipalCigna",
+      "product": "Prime Senior Elite",
+      "plan_type": "senior",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 56,
+        "max": 75
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 60,
+            "amount": 32900
+          },
+          {
+            "max_age": 65,
+            "amount": 44000
+          },
+          {
+            "max_age": 70,
+            "amount": 53700
+          },
+          {
+            "max_age": 75,
+            "amount": 63400
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 20,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 24
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered after 2 years.",
+        "You pay 20% of every claim."
+      ],
+      "source": "https://joinditto.in/health-insurance/manipal-cigna/prohealth-prime-senior-elite",
+      "verified": false
+    },
+    {
+      "id": "cigna-arogya-sanjeevani-5l",
+      "insurer": "ManipalCigna",
+      "product": "Arogya Sanjeevani",
+      "plan_type": "individual",
+      "sum_insured": 500000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 2700
+          },
+          {
+            "max_age": 25,
+            "amount": 3400
+          },
+          {
+            "max_age": 35,
+            "amount": 4200
+          },
+          {
+            "max_age": 40,
+            "amount": 4900
+          },
+          {
+            "max_age": 45,
+            "amount": 6100
+          },
+          {
+            "max_age": 50,
+            "amount": 7800
+          },
+          {
+            "max_age": 55,
+            "amount": 10300
+          },
+          {
+            "max_age": 60,
+            "amount": 13200
+          },
+          {
+            "max_age": 65,
+            "amount": 17600
+          },
+          {
+            "max_age": 70,
+            "amount": 21600
+          },
+          {
+            "max_age": 75,
+            "amount": 25500
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 5,
+      "room_rent": {
+        "capped": true,
+        "text": "Room rent up to 2% of the cover, at most ₹5,000 a day. ICU up to 5%, at most ₹10,000 a day."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [
+        {
+          "item": "cataract",
+          "text": "Cataract is paid up to 25% of the cover or ₹40,000 an eye, whichever is lower."
+        }
+      ],
+      "catches": [
+        "You pay 5% of every claim.",
+        "Room rent is capped at 2% of the cover, at most ₹5,000 a day.",
+        "Illnesses you already have are covered only after 3 years."
+      ],
+      "source": "https://www.manipalcigna.com/health-insurance",
+      "verified": false
+    },
+    {
+      "id": "cigna-super-top-up-25l-5l",
+      "insurer": "ManipalCigna",
+      "product": "Super Top Up",
+      "plan_type": "super_topup",
+      "sum_insured": 2500000,
+      "deductible": 500000,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 2200
+          },
+          {
+            "max_age": 25,
+            "amount": 2800
+          },
+          {
+            "max_age": 35,
+            "amount": 3400
+          },
+          {
+            "max_age": 40,
+            "amount": 4000
+          },
+          {
+            "max_age": 45,
+            "amount": 5600
+          },
+          {
+            "max_age": 50,
+            "amount": 8000
+          },
+          {
+            "max_age": 55,
+            "amount": 12000
+          },
+          {
+            "max_age": 60,
+            "amount": 16800
+          },
+          {
+            "max_age": 65,
+            "amount": 24800
+          },
+          {
+            "max_age": 70,
+            "amount": 30000
+          },
+          {
+            "max_age": 75,
+            "amount": 36000
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 700
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 24
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Pays only after the year's bills cross ₹5 lakh.",
+        "Illnesses you already have are covered after 2 years."
+      ],
+      "source": "https://manipalcigna.com/blog-entry/-/blogs/manipalcigna-health-insurance-launches-value-formoney-super-top-up-plan",
+      "verified": false
+    },
+    {
+      "id": "cigna-super-top-up-25l-10l",
+      "insurer": "ManipalCigna",
+      "product": "Super Top Up",
+      "plan_type": "super_topup",
+      "sum_insured": 2500000,
+      "deductible": 1000000,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 1400
+          },
+          {
+            "max_age": 25,
+            "amount": 1800
+          },
+          {
+            "max_age": 35,
+            "amount": 2200
+          },
+          {
+            "max_age": 40,
+            "amount": 2600
+          },
+          {
+            "max_age": 45,
+            "amount": 3600
+          },
+          {
+            "max_age": 50,
+            "amount": 5200
+          },
+          {
+            "max_age": 55,
+            "amount": 7800
+          },
+          {
+            "max_age": 60,
+            "amount": 10900
+          },
+          {
+            "max_age": 65,
+            "amount": 16000
+          },
+          {
+            "max_age": 70,
+            "amount": 19500
+          },
+          {
+            "max_age": 75,
+            "amount": 23400
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 500
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 24
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered after 2 years."
+      ],
+      "source": "https://manipalcigna.com/blog-entry/-/blogs/manipalcigna-health-insurance-launches-value-formoney-super-top-up-plan",
+      "verified": false
+    },
+    {
+      "id": "cigna-super-top-up-50l-10l",
+      "insurer": "ManipalCigna",
+      "product": "Super Top Up",
+      "plan_type": "super_topup",
+      "sum_insured": 5000000,
+      "deductible": 1000000,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 2200
+          },
+          {
+            "max_age": 25,
+            "amount": 2800
+          },
+          {
+            "max_age": 35,
+            "amount": 3400
+          },
+          {
+            "max_age": 40,
+            "amount": 4000
+          },
+          {
+            "max_age": 45,
+            "amount": 5600
+          },
+          {
+            "max_age": 50,
+            "amount": 8000
+          },
+          {
+            "max_age": 55,
+            "amount": 12000
+          },
+          {
+            "max_age": 60,
+            "amount": 16800
+          },
+          {
+            "max_age": 65,
+            "amount": 24800
+          },
+          {
+            "max_age": 70,
+            "amount": 30000
+          },
+          {
+            "max_age": 75,
+            "amount": 36000
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 700
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 24
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered after 2 years."
+      ],
+      "source": "https://manipalcigna.com/blog-entry/-/blogs/manipalcigna-health-insurance-launches-value-formoney-super-top-up-plan",
+      "verified": false
+    },
+    {
+      "id": "cigna-super-top-up-1cr-10l",
+      "insurer": "ManipalCigna",
+      "product": "Super Top Up",
+      "plan_type": "super_topup",
+      "sum_insured": 10000000,
+      "deductible": 1000000,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 3600
+          },
+          {
+            "max_age": 25,
+            "amount": 4600
+          },
+          {
+            "max_age": 35,
+            "amount": 5500
+          },
+          {
+            "max_age": 40,
+            "amount": 6500
+          },
+          {
+            "max_age": 45,
+            "amount": 9100
+          },
+          {
+            "max_age": 50,
+            "amount": 13000
+          },
+          {
+            "max_age": 55,
+            "amount": 19500
+          },
+          {
+            "max_age": 60,
+            "amount": 27300
+          },
+          {
+            "max_age": 65,
+            "amount": 40300
+          },
+          {
+            "max_age": 70,
+            "amount": 48800
+          },
+          {
+            "max_age": 75,
+            "amount": 58500
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 1000
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 24
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered after 2 years."
+      ],
+      "source": "https://manipalcigna.com/blog-entry/-/blogs/manipalcigna-health-insurance-launches-value-formoney-super-top-up-plan",
+      "verified": false
+    },
+    {
+      "id": "reliance-health-infinity-5l",
+      "insurer": "Reliance General",
+      "product": "Health Infinity",
+      "plan_type": "individual",
+      "sum_insured": 500000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 3600
+          },
+          {
+            "max_age": 25,
+            "amount": 4600
+          },
+          {
+            "max_age": 35,
+            "amount": 5500
+          },
+          {
+            "max_age": 40,
+            "amount": 6500
+          },
+          {
+            "max_age": 45,
+            "amount": 8100
+          },
+          {
+            "max_age": 50,
+            "amount": 10400
+          },
+          {
+            "max_age": 55,
+            "amount": 13600
+          },
+          {
+            "max_age": 60,
+            "amount": 17600
+          },
+          {
+            "max_age": 65,
+            "amount": 23400
+          },
+          {
+            "max_age": 70,
+            "amount": 28600
+          },
+          {
+            "max_age": 75,
+            "amount": 33800
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://reliancegeneral.co.in/health-insurance/health-infinity-insurance",
+      "verified": false
+    },
+    {
+      "id": "reliance-health-infinity-10l",
+      "insurer": "Reliance General",
+      "product": "Health Infinity",
+      "plan_type": "individual",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 5000
+          },
+          {
+            "max_age": 25,
+            "amount": 6300
+          },
+          {
+            "max_age": 35,
+            "amount": 7600
+          },
+          {
+            "max_age": 40,
+            "amount": 9000
+          },
+          {
+            "max_age": 45,
+            "amount": 11200
+          },
+          {
+            "max_age": 50,
+            "amount": 14400
+          },
+          {
+            "max_age": 55,
+            "amount": 18900
+          },
+          {
+            "max_age": 60,
+            "amount": 24500
+          },
+          {
+            "max_age": 65,
+            "amount": 38000
+          },
+          {
+            "max_age": 70,
+            "amount": 39600
+          },
+          {
+            "max_age": 75,
+            "amount": 46800
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://reliancegeneral.co.in/health-insurance/health-infinity-insurance",
+      "verified": false
+    },
+    {
+      "id": "reliance-health-infinity-10l-ped12",
+      "insurer": "Reliance General",
+      "product": "Health Infinity with shorter wait add-on",
+      "plan_type": "individual",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 6300
+          },
+          {
+            "max_age": 25,
+            "amount": 8000
+          },
+          {
+            "max_age": 35,
+            "amount": 9800
+          },
+          {
+            "max_age": 40,
+            "amount": 11500
+          },
+          {
+            "max_age": 45,
+            "amount": 14400
+          },
+          {
+            "max_age": 50,
+            "amount": 18400
+          },
+          {
+            "max_age": 55,
+            "amount": 24200
+          },
+          {
+            "max_age": 60,
+            "amount": 31000
+          },
+          {
+            "max_age": 65,
+            "amount": 54000
+          },
+          {
+            "max_age": 70,
+            "amount": 50600
+          },
+          {
+            "max_age": 75,
+            "amount": 59800
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 12
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered after 1 year, because of a paid add-on.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://reliancegeneral.co.in/health-insurance/health-infinity-insurance",
+      "verified": false
+    },
+    {
+      "id": "reliance-health-infinity-25l",
+      "insurer": "Reliance General",
+      "product": "Health Infinity",
+      "plan_type": "individual",
+      "sum_insured": 2500000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 6900
+          },
+          {
+            "max_age": 25,
+            "amount": 8800
+          },
+          {
+            "max_age": 35,
+            "amount": 10600
+          },
+          {
+            "max_age": 40,
+            "amount": 12500
+          },
+          {
+            "max_age": 45,
+            "amount": 15600
+          },
+          {
+            "max_age": 50,
+            "amount": 20000
+          },
+          {
+            "max_age": 55,
+            "amount": 26200
+          },
+          {
+            "max_age": 60,
+            "amount": 33800
+          },
+          {
+            "max_age": 65,
+            "amount": 45000
+          },
+          {
+            "max_age": 70,
+            "amount": 55000
+          },
+          {
+            "max_age": 75,
+            "amount": 65000
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://reliancegeneral.co.in/health-insurance/health-infinity-insurance",
+      "verified": false
+    },
+    {
+      "id": "reliance-health-infinity-10l-floater",
+      "insurer": "Reliance General",
+      "product": "Health Infinity",
+      "plan_type": "floater",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 10900
+          },
+          {
+            "max_age": 25,
+            "amount": 13900
+          },
+          {
+            "max_age": 35,
+            "amount": 16800
+          },
+          {
+            "max_age": 40,
+            "amount": 19800
+          },
+          {
+            "max_age": 45,
+            "amount": 24800
+          },
+          {
+            "max_age": 50,
+            "amount": 31700
+          },
+          {
+            "max_age": 55,
+            "amount": 41600
+          },
+          {
+            "max_age": 60,
+            "amount": 53500
+          },
+          {
+            "max_age": 65,
+            "amount": 71300
+          },
+          {
+            "max_age": 70,
+            "amount": 87100
+          },
+          {
+            "max_age": 75,
+            "amount": 103000
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 3000
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+        "One cover is shared by everyone on the policy."
+      ],
+      "source": "https://reliancegeneral.co.in/health-insurance/health-infinity-insurance",
+      "verified": false
+    },
+    {
+      "id": "reliance-health-gain-10l",
+      "insurer": "Reliance General",
+      "product": "Health Gain",
+      "plan_type": "individual",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 5300
+          },
+          {
+            "max_age": 25,
+            "amount": 6700
+          },
+          {
+            "max_age": 35,
+            "amount": 8200
+          },
+          {
+            "max_age": 40,
+            "amount": 9600
+          },
+          {
+            "max_age": 45,
+            "amount": 12000
+          },
+          {
+            "max_age": 50,
+            "amount": 15400
+          },
+          {
+            "max_age": 55,
+            "amount": 20200
+          },
+          {
+            "max_age": 60,
+            "amount": 25900
+          },
+          {
+            "max_age": 65,
+            "amount": 39000
+          },
+          {
+            "max_age": 70,
+            "amount": 42200
+          },
+          {
+            "max_age": 75,
+            "amount": 49900
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://www.reliancegeneral.co.in/Insurance/Health-Insurance/",
+      "verified": false
+    },
+    {
+      "id": "reliance-health-gain-10l-floater",
+      "insurer": "Reliance General",
+      "product": "Health Gain",
+      "plan_type": "floater",
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 10400
+          },
+          {
+            "max_age": 25,
+            "amount": 13300
+          },
+          {
+            "max_age": 35,
+            "amount": 16200
+          },
+          {
+            "max_age": 40,
+            "amount": 19000
+          },
+          {
+            "max_age": 45,
+            "amount": 23800
+          },
+          {
+            "max_age": 50,
+            "amount": 30400
+          },
+          {
+            "max_age": 55,
+            "amount": 39900
+          },
+          {
+            "max_age": 60,
+            "amount": 51300
+          },
+          {
+            "max_age": 65,
+            "amount": 68400
+          },
+          {
+            "max_age": 70,
+            "amount": 83600
+          },
+          {
+            "max_age": 75,
+            "amount": 98800
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 3000
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+        "One cover is shared by everyone on the policy."
+      ],
+      "source": "https://www.reliancegeneral.co.in/Insurance/Health-Insurance/",
+      "verified": false
+    },
+    {
+      "id": "reliance-arogya-sanjeevani-5l",
+      "insurer": "Reliance General",
+      "product": "Arogya Sanjeevani",
+      "plan_type": "individual",
+      "sum_insured": 500000,
+      "deductible": 0,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 1,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 2600
+          },
+          {
+            "max_age": 25,
+            "amount": 3400
+          },
+          {
+            "max_age": 35,
+            "amount": 4100
+          },
+          {
+            "max_age": 40,
+            "amount": 4800
+          },
+          {
+            "max_age": 45,
+            "amount": 6000
+          },
+          {
+            "max_age": 50,
+            "amount": 7700
+          },
+          {
+            "max_age": 55,
+            "amount": 10100
+          },
+          {
+            "max_age": 60,
+            "amount": 13000
+          },
+          {
+            "max_age": 65,
+            "amount": 17300
+          },
+          {
+            "max_age": 70,
+            "amount": 21100
+          },
+          {
+            "max_age": 75,
+            "amount": 25000
+          }
+        ],
+        "members_included": 1,
+        "per_extra_member": 0
+      },
+      "copay_percent": 5,
+      "room_rent": {
+        "capped": true,
+        "text": "Room rent up to 2% of the cover, at most ₹5,000 a day. ICU up to 5%, at most ₹10,000 a day."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [
+        {
+          "item": "cataract",
+          "text": "Cataract is paid up to 25% of the cover or ₹40,000 an eye, whichever is lower."
+        }
+      ],
+      "catches": [
+        "You pay 5% of every claim.",
+        "Room rent is capped at 2% of the cover, at most ₹5,000 a day.",
+        "Illnesses you already have are covered only after 3 years."
+      ],
+      "source": "https://www.reliancegeneral.co.in/Insurance/Health-Insurance/",
+      "verified": false
+    },
+    {
+      "id": "reliance-super-top-up-25l-10l",
+      "insurer": "Reliance General",
+      "product": "Health Super Top-Up",
+      "plan_type": "super_topup",
+      "sum_insured": 2500000,
+      "deductible": 1000000,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 1400
+          },
+          {
+            "max_age": 25,
+            "amount": 1800
+          },
+          {
+            "max_age": 35,
+            "amount": 2100
+          },
+          {
+            "max_age": 40,
+            "amount": 2500
+          },
+          {
+            "max_age": 45,
+            "amount": 3500
+          },
+          {
+            "max_age": 50,
+            "amount": 5000
+          },
+          {
+            "max_age": 55,
+            "amount": 7500
+          },
+          {
+            "max_age": 60,
+            "amount": 10500
+          },
+          {
+            "max_age": 65,
+            "amount": 15500
+          },
+          {
+            "max_age": 70,
+            "amount": 18800
+          },
+          {
+            "max_age": 75,
+            "amount": 22500
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 500
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered only after 3 years."
+      ],
+      "source": "https://www.reliancegeneral.co.in/Insurance/Health-Insurance/Super-Top-up.aspx",
+      "verified": false
+    },
+    {
+      "id": "reliance-super-top-up-50l-10l",
+      "insurer": "Reliance General",
+      "product": "Health Super Top-Up",
+      "plan_type": "super_topup",
+      "sum_insured": 5000000,
+      "deductible": 1000000,
+      "entry_age": {
+        "min": 0,
+        "max": 65
+      },
+      "max_members": 6,
+      "premium": {
+        "bands": [
+          {
+            "max_age": 17,
+            "amount": 2100
+          },
+          {
+            "max_age": 25,
+            "amount": 2700
+          },
+          {
+            "max_age": 35,
+            "amount": 3300
+          },
+          {
+            "max_age": 40,
+            "amount": 3900
+          },
+          {
+            "max_age": 45,
+            "amount": 5500
+          },
+          {
+            "max_age": 50,
+            "amount": 7800
+          },
+          {
+            "max_age": 55,
+            "amount": 11700
+          },
+          {
+            "max_age": 60,
+            "amount": 16400
+          },
+          {
+            "max_age": 65,
+            "amount": 24200
+          },
+          {
+            "max_age": 70,
+            "amount": 29200
+          },
+          {
+            "max_age": 75,
+            "amount": 35100
+          }
+        ],
+        "members_included": 2,
+        "per_extra_member": 800
+      },
+      "copay_percent": 0,
+      "room_rent": {
+        "capped": false,
+        "text": "Any single private room."
+      },
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "condition_waits_months": {},
+      "sub_limits": [],
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered only after 3 years."
+      ],
+      "source": "https://www.reliancegeneral.co.in/Insurance/Health-Insurance/Super-Top-up.aspx",
+      "verified": false
+    }
+  ]
+}

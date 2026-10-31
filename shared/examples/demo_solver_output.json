@@ -1,0 +1,191 @@
+{
+  "status": "ok",
+  "family_id": "demo-pune",
+  "budget": 110000,
+  "illustrative": true,
+  "picks": [
+    {
+      "policy_id": "star-young-star-gold-10l-floater",
+      "insurer": "Star Health",
+      "product": "Young Star Gold",
+      "plan_type": "floater",
+      "members": [
+        "rahul",
+        "sneha",
+        "aarav"
+      ],
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "premium": 21000,
+      "copay_percent": 0,
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "catches": [
+        "Adults can join only up to age 40.",
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+        "One cover is shared by everyone on the policy."
+      ]
+    },
+    {
+      "policy_id": "star-red-carpet-10l",
+      "insurer": "Star Health",
+      "product": "Senior Citizens Red Carpet",
+      "plan_type": "senior",
+      "members": [
+        "mohan"
+      ],
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "premium": 41000,
+      "copay_percent": 30,
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 12
+      },
+      "catches": [
+        "Illnesses you already have are covered after 1 year.",
+        "You pay 30% of every claim.",
+        "Room rent is capped at 1% of the cover, at most ₹4,000 a day.",
+        "Heart treatment, cataract, stroke, cancer and fractures have sub-limits."
+      ]
+    },
+    {
+      "policy_id": "reliance-health-infinity-10l",
+      "insurer": "Reliance General",
+      "product": "Health Infinity",
+      "plan_type": "individual",
+      "members": [
+        "lata"
+      ],
+      "sum_insured": 1000000,
+      "deductible": 0,
+      "premium": 24500,
+      "copay_percent": 0,
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "catches": [
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ]
+    },
+    {
+      "policy_id": "star-super-surplus-gold-50l-10l",
+      "insurer": "Star Health",
+      "product": "Super Surplus Gold",
+      "plan_type": "super_topup",
+      "members": [
+        "rahul",
+        "sneha",
+        "aarav"
+      ],
+      "sum_insured": 5000000,
+      "deductible": 1000000,
+      "premium": 4500,
+      "copay_percent": 0,
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 36
+      },
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered only after 3 years."
+      ]
+    },
+    {
+      "policy_id": "cigna-super-top-up-25l-10l",
+      "insurer": "ManipalCigna",
+      "product": "Super Top Up",
+      "plan_type": "super_topup",
+      "members": [
+        "mohan",
+        "lata"
+      ],
+      "sum_insured": 2500000,
+      "deductible": 1000000,
+      "premium": 16000,
+      "copay_percent": 0,
+      "waiting_periods_months": {
+        "initial": 1,
+        "specific_illness": 24,
+        "pre_existing": 24
+      },
+      "catches": [
+        "Pays only after the year's bills cross ₹10 lakh.",
+        "Illnesses you already have are covered after 2 years."
+      ]
+    }
+  ],
+  "total_premium": 107000,
+  "total_cover": 10500000,
+  "member_cover": {
+    "rahul": 6000000,
+    "sneha": 6000000,
+    "aarav": 6000000,
+    "mohan": 3500000,
+    "lata": 3500000
+  },
+  "usual_pick": {
+    "policy_id": "star-comprehensive-25l-floater",
+    "insurer": "Star Health",
+    "product": "Star Comprehensive",
+    "plan_type": "floater",
+    "members": [
+      "rahul",
+      "sneha",
+      "aarav",
+      "mohan",
+      "lata"
+    ],
+    "sum_insured": 2500000,
+    "deductible": 0,
+    "premium": 118000,
+    "copay_percent": 0,
+    "waiting_periods_months": {
+      "initial": 1,
+      "specific_illness": 24,
+      "pre_existing": 36
+    },
+    "catches": [
+      "Illnesses you already have are covered only after 3 years.",
+      "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+      "One cover is shared by everyone on the policy."
+    ]
+  },
+  "saving_vs_usual": 11000,
+  "claim_check": {
+    "mix": {
+      "member_id": "mohan",
+      "amount": 600000,
+      "policy_year": 2,
+      "covered": true,
+      "payable": 420000,
+      "out_of_pocket": 180000,
+      "covered_from_year": 2,
+      "notes": [
+        "Senior Citizens Red Carpet pays after a 30% co-pay of ₹1,80,000.",
+        "Heart treatment has a sub-limit. Check the policy wording for the amount."
+      ]
+    },
+    "usual": {
+      "member_id": "mohan",
+      "amount": 600000,
+      "policy_year": 2,
+      "covered": false,
+      "payable": 0,
+      "out_of_pocket": 600000,
+      "covered_from_year": 4,
+      "notes": [
+        "Star Comprehensive covers this only from year 4."
+      ]
+    }
+  }
+}
