@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #002e6e;
+  --color-navy-soft: #e6edf7;
+  --color-sky: #00baf2;
+  --color-sky-soft: #e5f8fe;
+  --color-amber: #ffb020;
+  --color-amber-soft: #fff4dc;
+  --color-ink: #0f1b2d;
+  --color-muted: #5b6b82;
+  --color-line: #dfe6ef;
+  --color-canvas: #f4f7fb;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.pop-in { animation: pop-in 280ms ease-out both; }
+
+@keyframes flash {
+  0% { box-shadow: 0 0 0 0 rgb(0 186 242 / 0.55); }
+  100% { box-shadow: 0 0 0 10px rgb(0 186 242 / 0); }
+}
+.flash { animation: flash 900ms ease-out; }
+.pop-in.flash { animation: pop-in 280ms ease-out both, flash 900ms ease-out; }
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+.pulse-ring { animation: pulse-ring 1.2s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pop-in, .flash, .pulse-ring { animation: none; }
+}
