@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSummary } from "@/lib/api";
-import type { ClaimOutcome, FamilyProfile, MixSummary, Policy, PolicyKind, Recommendation } from "@/lib/types";
+import type { ClaimOutcome, CoverCheck, FamilyProfile, MixSummary, Policy, PolicyKind, Recommendation } from "@/lib/types";
 import { conditionLabel, cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
 import { AlertIcon, CheckIcon, DocIcon, XIcon } from "./icons";
@@ -44,6 +44,7 @@ export function Results({ rec, family, onOpenPolicy, onEditFamily }: Props) {
         </button>
       </header>
 
+      {rec.coverCheck && rec.coverCheck.code !== "cover_met" && <CoverShort check={rec.coverCheck} />}
       <SummaryBox recId={rec.id} />
       <Compare rec={rec} family={family} />
       <CoverMap rec={rec} family={family} indexOf={indexOf} />
@@ -79,6 +80,24 @@ export function Results({ rec, family, onOpenPolicy, onEditFamily }: Props) {
 }
 
 /** Why this mix and what to watch, in a few lines. Sarvam writes it from the solver's facts. */
+/** The budget kept cover below what the family asked for. Says by how much and what budget would reach it. */
+function CoverShort({ check }: { check: CoverCheck }) {
+  return (
+    <div role="status" className="flex items-start gap-3 rounded-2xl border border-amber bg-amber-soft p-4 text-sm text-ink">
+      <AlertIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber" />
+      <div className="space-y-1">
+        <div className="font-semibold">
+          {cover(check.totalCover)} of cover, short of the {cover(check.target)} you asked for
+        </div>
+        <p>{check.text}</p>
+        {check.budgetNeeded != null && (
+          <p className="text-muted">Premiums are illustrative, so this budget is too. To try another budget, tap Edit family and tell me the new amount.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SummaryBox({ recId }: { recId: string }) {
   const [result, setResult] = useState<{ id: string; summary: MixSummary | null } | null>(null);
 
@@ -177,6 +196,9 @@ function Compare({ rec, family }: { rec: Recommendation; family: FamilyProfile }
         <div className="mt-0.5 text-sm text-ink">{cover(mix.totalCover)} total cover</div>
         <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
           {rec.saving != null && rec.saving > 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">{rupees(rec.saving)} less a year</span>}
+          {rec.coverCheck?.code === "cover_met" && (
+            <span className="rounded-full bg-sky-soft px-2 py-0.5 font-medium text-navy">You asked for {cover(rec.coverCheck.target)}</span>
+          )}
           {times > 1 && <span className="rounded-full bg-sky-soft px-2 py-0.5 font-medium text-navy">{Number(times.toFixed(1))}x the cover</span>}
           <span className="rounded-full bg-canvas px-2 py-0.5 text-ink">{mix.policies.length} policies</span>
           {!facts.some((f) => f.code === "condition_wait") && conditionWaits(mix.policies, family).map((w) => (

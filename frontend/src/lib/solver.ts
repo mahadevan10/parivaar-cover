@@ -1,12 +1,13 @@
 // The backend's formats (see shared/README.md) and the mapping to the UI's types.
 // This is the only file that knows the solver's snake_case shapes.
 
-import type { ClaimOutcome, ClaimScenario, FamilyProfile, Policy, PlanOption, Recommendation } from "./types";
+import type { ClaimOutcome, ClaimScenario, CoverCheck, FamilyProfile, PlanOption, Policy, Recommendation } from "./types";
 
 export type SolverFamily = {
   id: string;
   city?: string;
   budget?: number;
+  cover_target?: number | null;
   members: { id: string; name: string; age?: number; relation?: string; conditions: string[] }[];
   office_cover: { members: string[]; sum_insured: number }[];
 };
@@ -53,6 +54,15 @@ export type SolverOutput = {
   /** Null when no single floater can take the whole family. */
   usual_pick: SolverPick | null;
   saving_vs_usual: number | null;
+  cover_target?: number | null;
+  cover_check?: {
+    code: CoverCheck["code"];
+    target: number;
+    total_cover: number;
+    shortfall?: number;
+    budget_needed?: number | null;
+    text: string;
+  } | null;
   vs_usual?: { code: string; text: string }[];
   /** Catches from how the picks stack, most serious first. See shared/README.md. */
   mix_catches?: { code: string; text: string; members: string[] }[];
@@ -124,6 +134,7 @@ export function toSolverFamily(family: FamilyProfile, id: string): SolverFamily 
     id,
     city: family.city,
     budget: family.budget,
+    cover_target: family.coverTarget ?? null,
     members: family.members.map((m) => ({
       id: m.id,
       name: m.name,
@@ -224,6 +235,16 @@ export function toRecommendation(out: SolverOutput, claimSeries: SolverClaimSeri
     mix,
     saving: out.saving_vs_usual,
     vsUsual: out.vs_usual ?? [],
+    coverCheck: out.cover_check
+      ? {
+          code: out.cover_check.code,
+          target: out.cover_check.target,
+          totalCover: out.cover_check.total_cover,
+          shortfall: out.cover_check.shortfall,
+          budgetNeeded: out.cover_check.budget_needed,
+          text: out.cover_check.text,
+        }
+      : null,
     mixCatches: (out.mix_catches ?? []).map((c) => ({ code: c.code, text: c.text, memberIds: c.members })),
     memberCover: out.member_cover,
     claimScenarios: (claimSeries.length ? claimSeries : single).map(toClaimScenario),

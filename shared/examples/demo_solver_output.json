@@ -2,6 +2,7 @@
   "status": "ok",
   "family_id": "demo-pune",
   "budget": 110000,
+  "cover_target": 10000000,
   "illustrative": true,
   "picks": [
     {
@@ -465,6 +466,12 @@
       "text": "Mohan and Lata share the ₹25 lakh top-up. A big claim for one of them leaves less for the other that year."
     }
   ],
+  "cover_check": {
+    "code": "cover_met",
+    "target": 10000000,
+    "total_cover": 10500000,
+    "text": "You asked for ₹1 crore of cover. This mix gives ₹1.05 crore."
+  },
   "claim_check": {
     "mix": {
       "member_id": "mohan",

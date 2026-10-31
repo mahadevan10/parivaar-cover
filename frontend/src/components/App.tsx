@@ -51,6 +51,7 @@ function diffFamily(a: FamilyProfile, b: FamilyProfile): Set<string> {
   }
   if (a.city !== b.city) out.add("city");
   if (a.budget !== b.budget) out.add("budget");
+  if (a.coverTarget !== b.coverTarget || a.coverChecked !== b.coverChecked) out.add("cover");
   if (a.officeChecked !== b.officeChecked || a.officeCover?.amount !== b.officeCover?.amount) out.add("office");
   return out;
 }
@@ -119,12 +120,13 @@ export function App() {
     setRec(pending);
     setPending(null);
     setStage("explain");
+    const short = pending.coverCheck && pending.coverCheck.code !== "cover_met" ? ` ${pending.coverCheck.text}` : "";
     const usualLine = pending.usual
       ? `The usual pick is one floater at ${rupees(pending.usual.premium)} for ${cover(pending.usual.totalCover)}.`
       : "No single floater can take your whole family.";
     push({
       role: "assistant",
-      text: `Here is your mix. ${pending.mix.policies.length} policies for ${rupees(pending.mix.premium)} a year with ${cover(pending.mix.totalCover)} of total cover. ${usualLine} Premiums are illustrative. Ask me about any pick, or try the claim check.`,
+      text: `Here is your mix. ${pending.mix.policies.length} policies for ${rupees(pending.mix.premium)} a year with ${cover(pending.mix.totalCover)} of total cover.${short} ${usualLine} Premiums are illustrative. Ask me about any pick, or try the claim check.`,
     });
     setQuickReplies(["Why not one floater?", "What is a super top-up?", "What are the catches?"]);
   }, [pending]);

@@ -8,6 +8,7 @@ export function missingList(family: FamilyProfile): string[] {
   if (!family.healthChecked) out.push("Health conditions");
   if (!family.city) out.push("City");
   if (!family.budget) out.push("Yearly budget");
+  if (!family.coverChecked) out.push("Cover you want");
   if (!family.officeChecked) out.push("Office cover");
   return out;
 }

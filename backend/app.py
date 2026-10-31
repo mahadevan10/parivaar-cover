@@ -55,6 +55,8 @@ class Family(BaseModel):
     id: str = "web"
     city: str | None = None
     budget: int = Field(gt=0)
+    # Total cover the family wants, summed over every policy in the mix. None lets the solver choose.
+    cover_target: int | None = Field(None, gt=0)
     members: list[Member] = Field(min_length=1)
     office_cover: list[OfficeCover] = []
 
@@ -75,10 +77,12 @@ class FamilyDraft(BaseModel):
     id: str = "web"
     city: str | None = None
     budget: int | None = Field(None, gt=0)
+    cover_target: int | None = Field(None, gt=0)
     members: list[DraftMember] = []
     office_cover: list[OfficeCover] = []
     health_checked: bool = False
     office_checked: bool = False
+    cover_checked: bool = False
 
 
 class Claim(BaseModel):
@@ -192,15 +196,18 @@ question if something the user said is unclear, such as who a condition belongs 
 Return only a JSON object:
 {{"reply": "what you say to the user",
   "family": {{"city": str or null, "budget": yearly rupees as an integer or null,
+             "cover_target": total cover in rupees the user wants to buy for the whole family, or null,
              "members": [{{"name": str, "age": int or null, "relation": str,
                           "conditions": [only conditions the user said this person has, in lowercase]}}],
              "office_cover": [{{"members": [member ids], "sum_insured": rupees as an integer}}],
              "health_checked": true once the user has said who has health conditions,
-             "office_checked": true once the user has said whether anyone has office cover}}}}
+             "office_checked": true once the user has said whether anyone has office cover,
+             "cover_checked": true once the user has said how much cover they want or that they are not sure}}}}
 
 Only record what the user actually said. Never guess an age or a health condition. If the user has
 not mentioned a condition for someone, their conditions list is empty.
-Convert lakh amounts to rupees: 1.1 lakh is 110000.
+Convert lakh and crore amounts to rupees: 1.1 lakh is 110000 and 1 crore is 10000000.
+Office cover is cover the user already has. cover_target is the new cover they want, so keep them apart.
 The user is "self". Use relations like spouse, son, daughter, father, mother.
 """ + STYLE
 
@@ -264,6 +271,8 @@ def chat(req: ChatRequest):
     # The check runs on English, so values said in Malayalam or Hindi are not thrown away
     english = [dict(t, content=llm.to_english(t["content"])) if t["role"] == "user" else t for t in history]
     family = grounded(clean_family(new, family), family, english)
+    if req.message.strip().lower() == COVER_NOT_SURE.lower():
+        family["cover_checked"], family["cover_target"] = True, None
     missing = missing_details(family)
     reply = tidy(out.get("reply", ""))
     reply = proper_case(reply, [m["name"] for m in family["members"]] + [family["city"] or ""])
@@ -298,6 +307,7 @@ def from_profile(p):
                     for m in p.get("members") or []],
         "office_cover": [{"members": office.get("memberIds") or [], "sum_insured": office.get("amount")}] if office else [],
         "health_checked": p.get("healthChecked", False), "office_checked": p.get("officeChecked", False),
+        "cover_target": p.get("coverTarget"), "cover_checked": p.get("coverChecked", False),
     }
 
 
@@ -308,6 +318,7 @@ def to_profile(f):
                      "conditions": m["conditions"], "heardFrom": m.get("heard_from")} for m in f["members"]],
         "city": f["city"], "budget": f["budget"],
         "healthChecked": f["health_checked"], "officeChecked": f["office_checked"],
+        "coverTarget": f["cover_target"], "coverChecked": f["cover_checked"],
     }
     if office:
         profile["officeCover"] = {"amount": office["sum_insured"], "memberIds": office["members"]}
@@ -322,7 +333,12 @@ def quick_replies(family, missing):
         return ["No one else has one" if anyone else "No one has a condition"]
     if missing[0] == "Office cover":
         return ["No office cover"]
+    if missing[0] == "Cover you want":
+        return [COVER_NOT_SURE]
     return []
+
+
+COVER_NOT_SURE = "Not sure"
 
 
 NEXT_QUESTION = {
@@ -331,6 +347,7 @@ NEXT_QUESTION = {
     "Office cover": "Does anyone get health cover from their office? If yes, how much?",
     "City": "Which city do you live in?",
     "Yearly budget": "How much can you spend on premiums each year?",
+    "Cover you want": "How much total cover would you like for the family? For example, ₹1 crore.",
 }
 
 
@@ -362,6 +379,7 @@ def explain_facts(rec):
     usual = rec["usual_pick"]
     return {
         "budget": rec["budget"], "total_premium": rec["total_premium"], "total_cover": rec["total_cover"],
+        "cover_target": rec.get("cover_target"), "cover_check": rec.get("cover_check"),
         "member_cover": rec["member_cover"],
         "picks": [{k: p[k] for k in keep} for p in rec["picks"]],
         "usual_pick": {k: usual[k] for k in keep if k in usual} if usual else None,
@@ -421,6 +439,7 @@ def summary_facts(solution, family):
                    "reasons": [r["text"] for r in p.get("reasons", []) if r["code"] != "next_best"]}
                   for p in solution["picks"]],
         "watch_these": [c["text"] for c in solution.get("mix_catches", [])[:3]],
+        # cover_check is left out: the results show its sentence as written, above the summary
     }
 
 
@@ -542,6 +561,10 @@ def clean_family(raw, previous):
         "office_cover": office,
         "health_checked": bool(raw.get("health_checked") or previous.get("health_checked")),
         "office_checked": bool(raw.get("office_checked") or previous.get("office_checked") or office),
+        "cover_target": next((c for c in (as_int(raw.get("cover_target")), as_int(previous.get("cover_target")))
+                              if c and c > 0), None),
+        "cover_checked": bool(raw.get("cover_checked") or previous.get("cover_checked")
+                              or as_int(raw.get("cover_target"))),
     }
 
 
@@ -629,4 +652,6 @@ def missing_details(family):
         missing.append("City")
     if not family["budget"]:
         missing.append("Yearly budget")
+    if not family["cover_checked"]:
+        missing.append("Cover you want")
     return missing

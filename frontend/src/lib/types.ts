@@ -28,6 +28,10 @@ export type FamilyProfile = {
   healthChecked: boolean;
   /** True once the user has said whether anyone has office cover. */
   officeChecked: boolean;
+  /** Total cover the family wants, summed over every policy in the mix. Unset lets the solver choose. */
+  coverTarget?: number;
+  /** True once the user has given a cover amount or said they are not sure. */
+  coverChecked?: boolean;
 };
 
 export type ChatTurn = {
@@ -103,6 +107,17 @@ export type ClaimScenario = {
   byYear: { year: number; usual: ClaimOutcome; mix: ClaimOutcome }[];
 };
 
+/** cover_short: the budget cannot buy the cover asked for. cover_out_of_reach: no mix reaches it at any price. */
+export type CoverCheck = {
+  code: "cover_met" | "cover_short" | "cover_out_of_reach";
+  target: number;
+  totalCover: number;
+  shortfall?: number;
+  /** Lowest yearly premium for a mix that reaches the target. Null when none does. */
+  budgetNeeded?: number | null;
+  text: string;
+};
+
 export type Recommendation = {
   id: string;
   /** Premiums are illustrative in the prototype. The UI labels them wherever shown. */
@@ -116,6 +131,8 @@ export type Recommendation = {
   vsUsual: { code: string; text: string }[];
   /** Catches that come from how the policies stack, most serious first, from the solver. */
   mixCatches: MixCatch[];
+  /** Whether the mix reaches the cover the family asked for. Null when they gave no amount. */
+  coverCheck: CoverCheck | null;
   /** Most each member can claim in a year, from the solver. */
   memberCover: Record<string, number>;
   claimScenarios: ClaimScenario[];

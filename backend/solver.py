@@ -108,10 +108,17 @@ def target_lakhs(member):
     return TARGET_LAKHS_60_PLUS if member["age"] >= 60 else TARGET_LAKHS_UNDER_60
 
 
-def optimise(family, cands, forbid=None):
-    """Indices of the best candidates to buy, or None when nothing fits the budget.
+def lakhs_up(amount):
+    """Rupees as whole lakhs, rounded up, so a floor of ₹1,50,001 asks for 2 lakh."""
+    return -(-amount // LAKH)
 
-    forbid rules out one candidate, which shows what the solver would pick without it.
+
+def build_model(family, cands, *, budget=True, floor=None, forbid=None):
+    """The rules every mix must follow, plus the value of each member's cover.
+
+    budget=False drops the budget limit. floor is the least total cover the picks must add up to,
+    in rupees. forbid rules out one candidate, which shows what the solver would pick without it.
+    Returns the model, one choice per candidate, the total cover in lakhs and the value terms.
     """
     office = office_cover(family)
     model = cp_model.CpModel()
@@ -148,46 +155,114 @@ def optimise(family, cands, forbid=None):
                       if cands[j]["policy"]["sum_insured"] + office[mid] >= deductible]
             model.Add(x[i] <= sum(x[j] for j in enough))
 
-    model.Add(sum(c["premium"] * x[i] for i, c in enumerate(cands)) <= family["budget"])
+    # Total cover is what the picks add up to, the same sum as total_cover in the output
+    total_cover = sum(c["policy"]["sum_insured"] // LAKH * x[i] for i, c in enumerate(cands))
+    if budget:
+        model.Add(sum(c["premium"] * x[i] for i, c in enumerate(cands)) <= family["budget"])
+    if floor:
+        model.Add(total_cover >= lakhs_up(floor))
     if forbid is not None:
         model.Add(x[forbid] == 0)
-    objective += [-(c["premium"] + c["penalty"]) * x[i] for i, c in enumerate(cands)]
-    model.Maximize(sum(objective))
+    return model, x, total_cover, objective
 
+
+def run(model, x):
+    """Indices of the chosen candidates, or None when no mix follows the rules."""
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 10
     status = solver.Solve(model)
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         return None
-    return [i for i in range(len(cands)) if solver.Value(x[i])]
+    return [i for i in range(len(x)) if solver.Value(x[i])]
+
+
+def optimise(family, cands, forbid=None, floor=None):
+    """The best-value mix within the budget with at least floor rupees of cover, or None."""
+    model, x, _, objective = build_model(family, cands, floor=floor, forbid=forbid)
+    objective += [-(c["premium"] + c["penalty"]) * x[i] for i, c in enumerate(cands)]
+    model.Maximize(sum(objective))
+    return run(model, x)
+
+
+def max_cover(family, cands, target):
+    """The most total cover the budget can buy, up to the target, in rupees. None if nothing fits."""
+    model, x, total_cover, _ = build_model(family, cands)
+    counted = model.NewIntVar(0, lakhs_up(target), "counted_total")
+    model.Add(counted <= total_cover)
+    model.Maximize(counted)
+    chosen = run(model, x)
+    if chosen is None:
+        return None
+    return sum(cands[i]["policy"]["sum_insured"] for i in chosen)
+
+
+def cheapest_for(family, cands, target):
+    """The lowest yearly premium for a mix with at least the target cover, ignoring the budget."""
+    model, x, _, _ = build_model(family, cands, budget=False, floor=target)
+    model.Minimize(sum(c["premium"] * x[i] for i, c in enumerate(cands)))
+    chosen = run(model, x)
+    return None if chosen is None else sum(cands[i]["premium"] for i in chosen)
 
 
 def solve(family, policies=None):
     policies = policies or load_policies()
     cands = candidates(family, policies)
-    chosen = optimise(family, cands)
+    target = family.get("cover_target")
+
+    # The budget comes first. When it cannot buy the cover asked for, the mix gets as close as it can.
+    floor, chosen, short = target, None, False
+    if target:
+        chosen = optimise(family, cands, floor=target)
+        if chosen is None:
+            reachable = max_cover(family, cands, target)
+            if reachable is not None:
+                floor, short = reachable, True
+                chosen = optimise(family, cands, floor=reachable)
+    else:
+        chosen = optimise(family, cands)
     if chosen is None:
         return {"status": "no_fit", "family_id": family["id"], "budget": family["budget"],
-                "message": "No mix covers everyone within this budget."}
+                "cover_target": target, "message": "No mix covers everyone within this budget."}
 
-    picks = [dict(pick_out(cands[i]), reasons=reasons_for(family, cands, chosen, i)) for i in chosen]
+    picks = [dict(pick_out(cands[i]), reasons=reasons_for(family, cands, chosen, i, floor)) for i in chosen]
     picks.sort(key=lambda p: (p["plan_type"] == "super_topup", -len(p["members"])))
     usual = usual_pick(family, policies)
     total = sum(p["premium"] for p in picks)
+    total_cover = sum(p["sum_insured"] for p in picks)
     return {
         "status": "ok",
         "family_id": family["id"],
         "budget": family["budget"],
+        "cover_target": target,
         "illustrative": True,
         "picks": picks,
         "total_premium": total,
-        "total_cover": sum(p["sum_insured"] for p in picks),
+        "total_cover": total_cover,
         "member_cover": member_cover(family, picks),
         "usual_pick": usual,
         "saving_vs_usual": usual["premium"] - total if usual else None,
         "vs_usual": vs_usual(family, picks, usual),
         "mix_catches": mix_catches(family, picks),
+        "cover_check": cover_check(family, cands, target, total_cover) if target else None,
     }
+
+
+def cover_check(family, cands, target, total_cover):
+    """Whether the mix reaches the cover the family asked for and, if not, what budget would."""
+    if total_cover >= target:
+        return {"code": "cover_met", "target": target, "total_cover": total_cover,
+                "text": f"You asked for {lakhs(target)} of cover. This mix gives {lakhs(total_cover)}."}
+    needed = cheapest_for(family, cands, target)
+    out = {"target": target, "total_cover": total_cover, "shortfall": target - total_cover,
+           "budget": family["budget"], "budget_needed": needed}
+    if needed is None:
+        return dict(out, code="cover_out_of_reach",
+                    text=f"You asked for {lakhs(target)} of cover. No mix of the plans we have reaches that. "
+                         f"This mix gives {lakhs(total_cover)}, the most your {inr(family['budget'])} budget can buy.")
+    return dict(out, code="cover_short",
+                text=f"You asked for {lakhs(target)} of cover. Your {inr(family['budget'])} budget reaches "
+                     f"{lakhs(total_cover)}. {lakhs(target)} of cover needs about "
+                     f"{inr(needed)} a year.")
 
 
 def pick_out(c):
@@ -263,7 +338,7 @@ def base_index(cands, chosen, mid):
     return next((i for i in chosen if mid in cands[i]["members"] and not is_topup(cands[i]["policy"])), None)
 
 
-def reasons_for(family, cands, chosen, i):
+def reasons_for(family, cands, chosen, i, floor=None):
     c, policy = cands[i], cands[i]["policy"]
     by_id = {m["id"]: m for m in family["members"]}
     group = [by_id[mid] for mid in c["members"]]
@@ -315,7 +390,7 @@ def reasons_for(family, cands, chosen, i):
                             "months": months, "other_options_months": others,
                             "clause": wait_clause(policy, cond), "text": text})
 
-    reasons.append(next_best(family, cands, chosen, i))
+    reasons.append(next_best(family, cands, chosen, i, floor))
     return reasons
 
 
@@ -335,12 +410,13 @@ def member_terms(family, cands, idx):
     return terms
 
 
-def next_best(family, cands, chosen, i):
+def next_best(family, cands, chosen, i, floor=None):
     """What the solver picks when this candidate is ruled out, compared with the chosen mix."""
-    alt = optimise(family, cands, forbid=i)
+    alt = optimise(family, cands, forbid=i, floor=floor)
     if alt is None:
         return {"code": "next_best", "possible": False,
-                "text": "Without this plan, no mix covers everyone within the budget."}
+                "text": f"Without this plan, no mix gives {lakhs(floor)} of cover within the budget." if floor
+                        else "Without this plan, no mix covers everyone within the budget."}
     by_id = {m["id"]: m for m in family["members"]}
 
     def label(j):
@@ -526,9 +602,9 @@ def inr(amount):
 
 
 def lakhs(amount):
-    """Cover amounts the way policies state them, like ₹10 lakh or ₹1 crore."""
-    if amount and amount % (100 * LAKH) == 0:
-        return f"₹{amount // (100 * LAKH)} crore"
+    """Cover amounts the way policies state them, like ₹10 lakh, ₹1 crore or ₹1.05 crore."""
+    if amount and amount >= 100 * LAKH and amount % LAKH == 0:
+        return f"₹{amount / (100 * LAKH):g} crore"
     if amount and amount % LAKH == 0:
         return f"₹{amount // LAKH} lakh"
     return inr(amount)

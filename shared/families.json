@@ -5,6 +5,7 @@
       "id": "demo-pune",
       "city": "Pune",
       "budget": 110000,
+      "cover_target": 10000000,
       "members": [
         {"id": "rahul", "name": "Rahul", "age": 36, "relation": "self", "conditions": []},
         {"id": "sneha", "name": "Sneha", "age": 33, "relation": "spouse", "conditions": []},

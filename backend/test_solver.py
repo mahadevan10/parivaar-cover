@@ -97,6 +97,52 @@ class DemoFamily(unittest.TestCase):
             self.assertEqual(check["covered_from_year"], 3 if not covered else year)
 
 
+class CoverTarget(unittest.TestCase):
+    def solve(self, **changes):
+        return solver.solve(dict(FAMILIES["demo-pune"], **changes), POLICIES)
+
+    def test_one_crore_keeps_the_deck_mix(self):
+        result = self.solve(cover_target=10000000)
+        self.assertEqual(result["total_premium"], 107000)
+        self.assertEqual(result["cover_check"]["code"], "cover_met")
+        self.assertEqual(result["cover_check"]["text"], "You asked for ₹1 crore of cover. This mix gives ₹1.05 crore.")
+
+    def test_a_higher_target_buys_more_cover_within_the_budget(self):
+        result = self.solve(cover_target=30000000)
+        self.assertGreaterEqual(result["total_cover"], 30000000)
+        self.assertLessEqual(result["total_premium"], 110000)
+        self.assertEqual(result["cover_check"]["code"], "cover_met")
+
+    def test_budget_comes_first_and_says_what_the_cover_needs(self):
+        result = self.solve(cover_target=10000000, budget=42000)
+        check = result["cover_check"]
+        self.assertEqual(result["status"], "ok")
+        self.assertLessEqual(result["total_premium"], 42000)
+        self.assertLess(result["total_cover"], 10000000)
+        self.assertEqual(check["code"], "cover_short")
+        self.assertEqual(check["shortfall"], 10000000 - result["total_cover"])
+        self.assertGreater(check["budget_needed"], 42000)
+        self.assertIn("₹42,000 budget reaches", check["text"])
+        # The suggested budget really buys the cover
+        again = self.solve(cover_target=10000000, budget=check["budget_needed"])
+        self.assertEqual(again["cover_check"]["code"], "cover_met")
+
+    def test_short_mix_has_the_most_cover_the_budget_allows(self):
+        short = self.solve(cover_target=10000000, budget=42000)
+        for target in (short["total_cover"] + solver.LAKH, 10000000 - solver.LAKH):
+            self.assertLess(self.solve(cover_target=target, budget=42000)["total_cover"], target)
+
+    def test_a_target_no_mix_reaches(self):
+        check = self.solve(cover_target=1_000_000_000)["cover_check"]
+        self.assertEqual(check["code"], "cover_out_of_reach")
+        self.assertIsNone(check["budget_needed"])
+
+    def test_no_target_means_no_cover_check(self):
+        result = self.solve(cover_target=None)
+        self.assertIsNone(result["cover_check"])
+        self.assertEqual(result["total_premium"], 107000)
+
+
 class OtherFamilies(unittest.TestCase):
     def check_valid(self, family_id):
         family = FAMILIES[family_id]
@@ -163,6 +209,7 @@ class Formatting(unittest.TestCase):
     def test_lakhs(self):
         self.assertEqual(solver.lakhs(1000000), "₹10 lakh")
         self.assertEqual(solver.lakhs(10000000), "₹1 crore")
+        self.assertEqual(solver.lakhs(10500000), "₹1.05 crore")
         self.assertEqual(solver.lakhs(250000), "₹2,50,000")
 
 
