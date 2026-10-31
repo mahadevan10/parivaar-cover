@@ -21,6 +21,7 @@ export const AlertIcon = svg(<><path d="M12 4l9 16H3z" /><path d="M12 10v4M12 17
 export const PlusIcon = svg(<path d="M12 5v14M5 12h14" />);
 export const SpeakerIcon = svg(<><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></>);
 export const SpeakerOffIcon = svg(<><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M17 9.5l5 5M22 9.5l-5 5" /></>);
+export const WaveIcon = svg(<path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" />);
 export const ShieldIcon = svg(<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z" />);
 export const SpinnerIcon = ({ className = "h-5 w-5" }: P) => (
   <svg viewBox="0 0 24 24" className={`animate-spin ${className}`} aria-hidden="true">

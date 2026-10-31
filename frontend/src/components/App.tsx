@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, FamilyProfile, Policy, Recommendation, Stage } from "@/lib/types";
 import { getRecommendation, NoFitError, sendChat } from "@/lib/api";
-import { missingList } from "@/lib/family";
+import { missingList, VERIFIED } from "@/lib/family";
 import { cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
 import { ChatPanel } from "./ChatPanel";
@@ -23,22 +23,20 @@ const WELCOME: ChatMessage = {
   text: "Namaste. I'll help you cover your whole family with the right mix of health policies. Who should the plan cover? Tap the mic and speak in any language, or type.",
 };
 
-/** Typed or spoken ways to say "go ahead" once the family is complete. */
-const GO_AHEAD = /^(find my mix|go ahead|proceed|continue|yes,? go ahead|chalo|haan|हाँ|हां|आगे बढ़ो|आगे बढ़ें)[.!।]?$/i;
+// Only the verify button on the board (or a retry) starts the search.
+const START_SEARCH = /^(i have verified all my information|find my mix|try again)[.!]?$/i;
 
 /** The backend adds this when intake is done. The app says it in its own words instead. */
 const BACKEND_READY_LINE = /I have everything I need to find your options\.?/i;
 
-function readyMessage(language?: string): string {
+function readyMessage(language: string | undefined, endedTalk: boolean): string {
   const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
   if (language === "hi-IN") {
-    return wide
-      ? "मेरे पास सारी जानकारी है। दाईं ओर परिवार की जानकारी एक बार देख लें, फिर Find my mix दबाएं।"
-      : "मेरे पास सारी जानकारी है। Family board खोलकर जानकारी देख लें, फिर Find my mix दबाएं।";
+    const where = wide ? "दाईं ओर अपनी जानकारी देख लें" : "Family board खोलकर अपनी जानकारी देख लें";
+    return `मेरे पास आपकी सारी जानकारी है। ${endedTalk ? "मैंने talk mode बंद कर दिया है। " : ""}${where}, फिर "${VERIFIED}" दबाएं।`;
   }
-  return wide
-    ? "I have all the details I need. Check your family on the right, then tap Find my mix to see your plan. You can also say go ahead."
-    : "I have all the details I need. Open the Family board tab, check the details, then tap Find my mix. You can also say go ahead.";
+  const where = wide ? "Please check the details on the right" : "Please open the Family board tab and check the details";
+  return `I have all your information. ${endedTalk ? "I've turned off talk mode so you can check it. " : ""}${where}, then tap "${VERIFIED}".`;
 }
 
 let counter = 0;
@@ -71,6 +69,7 @@ export function App() {
   const [openPolicy, setOpenPolicy] = useState<string | null>(null);
   const [changed, setChanged] = useState<Set<string>>(new Set());
   const [mobileView, setMobileView] = useState<"chat" | "board">("chat");
+  const [talkMode, setTalkMode] = useState(false);
 
   const familyRef = useRef(family);
   useEffect(() => {
@@ -109,7 +108,7 @@ export function App() {
           ? "No mix fits this budget. Try a higher budget, or tell me if anyone already has cover."
           : "I couldn't reach the optimiser just now. Please try again.",
       });
-      setQuickReplies(["Find my mix"]);
+      setQuickReplies(["Try again"]);
     }
   }, []);
 
@@ -131,7 +130,7 @@ export function App() {
   }, [pending]);
 
   const send = useCallback(async (text: string, meta: SendMeta) => {
-    if (GO_AHEAD.test(text.trim()) && ready && !rec) {
+    if (START_SEARCH.test(text.trim()) && ready && !rec) {
       push({ role: "user", text, via: meta.via, language: meta.language });
       void findMix();
       return;
@@ -157,9 +156,11 @@ export function App() {
       const reply = nowReady ? res.reply.replace(BACKEND_READY_LINE, "").trim() : res.reply;
       if (reply) push({ role: "assistant", text: reply, citations: res.citations });
       // Tell the user plainly that intake is done and where to go next.
+      // Intake is done: end talk mode so the user can check the board and verify it.
       if (nowReady) {
-        push({ role: "assistant", text: readyMessage(meta.language) });
-        setQuickReplies(["Find my mix"]);
+        push({ role: "assistant", text: readyMessage(meta.language, talkMode) });
+        setTalkMode(false);
+        setQuickReplies([]);
       }
     } catch {
       push({
@@ -171,7 +172,7 @@ export function App() {
     } finally {
       setLoading(false);
     }
-  }, [messages, rec, ready, applyFamily, findMix]);
+  }, [messages, rec, ready, talkMode, applyFamily, findMix]);
 
   // Board edits are local. Recheck what's missing straight away.
   const editFamily = (next: FamilyProfile) => {
@@ -184,7 +185,7 @@ export function App() {
   const backToFamily = () => {
     setRec(null);
     setStage("talk");
-    setQuickReplies(ready ? ["Find my mix"] : []);
+    setQuickReplies([]);
   };
 
   const policies: Record<string, Policy> = Object.fromEntries(
@@ -209,7 +210,7 @@ export function App() {
         changedIds={changed}
         busy={loading}
         onChange={editFamily}
-        onFindMix={() => send("Find my mix", { via: "text" })}
+        onFindMix={() => send(VERIFIED, { via: "text" })}
       />
     );
 
@@ -260,6 +261,8 @@ export function App() {
             placeholder={rec ? "Ask about any pick or catch" : "Type, or tap the mic to speak"}
             onSend={send}
             onOpenPolicy={setOpenPolicy}
+            talkMode={talkMode}
+            onTalkModeChange={setTalkMode}
           />
         </aside>
         <div className={`min-h-0 min-w-0 overflow-y-auto ${mobileView === "board" ? "block" : "hidden"} lg:block`}>

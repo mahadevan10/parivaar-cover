@@ -5,7 +5,8 @@ import { transcribe } from "@/lib/api";
 import { languageName } from "@/lib/format";
 import { SARVAM_LANGUAGES } from "@/lib/sarvam";
 import { MAX_SECONDS, useRecorder } from "@/lib/useRecorder";
-import { MicIcon, SendIcon, SpinnerIcon, StopIcon, XIcon } from "./icons";
+import { MicIcon, SendIcon, SpinnerIcon, StopIcon, WaveIcon, XIcon } from "./icons";
+import { TalkPanel, type TalkState } from "./TalkPanel";
 
 export type SendMeta = { via: "voice" | "text"; language?: string };
 
@@ -13,7 +14,10 @@ type VoiceDraft = { language?: string; numbers: string[] };
 
 const NUMBER_RE = /(?:₹\s*)?\d[\d,.]*\s*(?:lakhs?|lacs?|k\b|thousand|crores?|years?|yrs|saal)?/gi;
 
-export function Composer({ onSend, disabled, placeholder, handsFree = false, listenToken = 0, onMicStart, toolbar }: {
+export function Composer({
+  onSend, disabled, placeholder, handsFree = false, listenToken = 0, onMicStart, toolbar,
+  speaking = false, muted = false, onToggleMute, onTalkMode,
+}: {
   onSend: (text: string, meta: SendMeta) => void;
   disabled: boolean;
   placeholder: string;
@@ -25,6 +29,12 @@ export function Composer({ onSend, disabled, placeholder, handsFree = false, lis
   onMicStart?: () => void;
   /** Voice controls shown above the input. */
   toolbar?: React.ReactNode;
+  /** A reply is being read aloud. */
+  speaking?: boolean;
+  muted?: boolean;
+  onToggleMute?: () => void;
+  /** Turn talk mode on or off. */
+  onTalkMode?: (on: boolean) => void;
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -101,6 +111,11 @@ export function Composer({ onSend, disabled, placeholder, handsFree = false, lis
   };
 
   const shownError = error ?? rec.error;
+  const talkState: TalkState = rec.recording ? "listening" : busy || disabled ? "thinking" : speaking ? "speaking" : "idle";
+  const tapTalk = () => {
+    if (rec.recording) rec.stop();
+    else if (talkState !== "thinking") listen();
+  };
   const lang = languageName(voice?.language);
 
   return (
@@ -133,6 +148,20 @@ export function Composer({ onSend, disabled, placeholder, handsFree = false, lis
         <p role="alert" className="mb-2 rounded-lg bg-rose-50 px-3 py-1.5 text-xs text-rose-700">{shownError}</p>
       )}
 
+      {handsFree ? (
+        <TalkPanel
+          state={talkState}
+          levels={rec.levels}
+          muted={muted}
+          onTap={tapTalk}
+          onToggleMute={() => onToggleMute?.()}
+          onEnd={() => {
+            rec.cancel();
+            onTalkMode?.(false);
+          }}
+        />
+      ) : (
+      <>
       <div className="flex items-end gap-2">
         {rec.recording ? (
           <Recording levels={rec.levels} seconds={rec.seconds} handsFree={handsFree} onCancel={rec.cancel} />
@@ -162,7 +191,20 @@ export function Composer({ onSend, disabled, placeholder, handsFree = false, lis
           onStop={rec.stop}
         />
 
-        {!rec.recording && (
+        {!rec.recording && !text.trim() && onTalkMode && (
+          <button
+            type="button"
+            onClick={() => onTalkMode(true)}
+            disabled={disabled || busy}
+            aria-label="Start talk mode"
+            title="Talk mode: a hands-free voice conversation"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-navy text-white transition hover:bg-navy/90 disabled:bg-navy/25"
+          >
+            <WaveIcon />
+          </button>
+        )}
+
+        {!rec.recording && (text.trim() || !onTalkMode) && (
           <button
             type="button"
             onClick={send}
@@ -175,10 +217,10 @@ export function Composer({ onSend, disabled, placeholder, handsFree = false, lis
         )}
       </div>
       <p className="mt-1.5 px-1 text-[11px] text-muted">
-        {handsFree
-          ? "Talk mode is on. I send when you pause, and read my reply aloud."
-          : "Speak in Hindi, English or any Indian language. Voice by Sarvam AI."}
+        Speak in Hindi, English or any Indian language. Tap the wave icon for a hands-free talk.
       </p>
+      </>
+      )}
     </div>
   );
 }

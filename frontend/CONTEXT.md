@@ -2,12 +2,13 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, branch `fe/live-only` (mock removed, ready message)._
+_Last updated: 2026-10-31, branch `fe/talk-mode-verify` (talk mode panel, verify button)._
 
 ## Status
 
 - The app runs on live data only. The mock chat, demo data, claim-check fixture and its generator script are gone (#17 already removed "Use the demo family"). The backend must be running; the URL defaults to `http://localhost:8000`.
-- When `/chat` first says the family is complete, the app adds its own message: "I have all the details I need", pointing to Find my mix on the right (or the Family board tab on phones), in Hindi if the user spoke Hindi. The backend's own ready line is dropped so it isn't said twice. The Find my mix button glows while ready. Saying or typing "go ahead", "proceed", "chalo" or "हाँ" also starts the search.
+- When `/chat` first says the family is complete, the app says "I have all your information" and asks the user to check the board and tap "I have verified all my information" (Family board tab on phones, Hindi if they spoke Hindi). In talk mode it also ends talk mode and says so. The backend's own ready line is dropped so it isn't said twice. The board button is now labelled "I have verified all my information" and glows while ready. Only that button, or "Try again" after an error, starts the search.
+- Talk mode is a panel in place of the message box (`TalkPanel.tsx`), started from a wave button: live mic bars while listening, dots while thinking, waving amber bars while speaking. Replaces the old switch.
 - Replies are read aloud (Sarvam text-to-speech via `/api/tts`), with a hands-free talk mode and a sticky session language for speech-to-text. Merged in #13.
 - The optimise screen now follows the real request. "Testing combinations" keeps spinning until `/recommend` answers, then the last two checks tick, a "Done" line shows, and the results open. After 6 seconds a "Still working" note appears. Tested in the browser: the demo family takes 3.5 seconds end to end; a family of 8 took about 61 seconds and waited correctly.
 - Fixed a duplicate React key warning when the mix holds the same product twice (big families get two Super Surplus Gold top-ups).
@@ -41,7 +42,8 @@ _Last updated: 2026-10-31, branch `fe/live-only` (mock removed, ready message)._
 | Policy citations open a "fine print" sheet built from the pick's own fields | The data has no clause text yet. Every sheet says it is from public brochures and not yet checked against the wording. |
 | Strip the codec suffix from the audio type in `/api/stt` | Sarvam rejects `audio/webm;codecs=opus`, which is what Chrome records. |
 | Offline message if `/chat` fails | The user can still fill the board by hand. |
-| App's own "all details" message when intake completes | The user needs a clear next step, and the button is in the other pane. |
+| App's own "all details" message when intake completes; talk mode ends there | The user must check the facts the solver will use, and the button is in the other pane. |
+| The search starts only from the verify button | A spoken "yes" could skip the check. |
 | `usual` and `saving` on `Recommendation` are nullable; no made-up comparison when no single floater fits | The solver has nothing to compare with, and inventing a usual pick would show a fake price. |
 | Optimise steps are paced by the real `/recommend` call; the solver's answer is held in `pending` until every step ticks | The old fixed timer ticked everything in 2.4 seconds, then sat still while big families took up to a minute. |
 | Condition names follow `shared/README.md` (`hypertension`, `heart_disease`); the UI shows friendly labels | The solver matches conditions by name. |

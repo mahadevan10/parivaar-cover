@@ -17,7 +17,9 @@
 
 ## Talk mode (hands free)
 
-- A "Talk mode" switch above the message box. Turning it on opens the mic.
+- A wave button sits where Send is while the message box is empty. Tapping it starts talk mode and opens the mic.
+- `TalkPanel` replaces the message box: a navy panel with five bars and a soft glow. Listening: sky bars follow the mic. Thinking: bouncing dots. Speaking: amber bars wave, and a tap interrupts. Idle: "Tap to talk". Mute on the left, end on the right.
+- When the backend first says the family is complete, the app ends talk mode, reads one message ("I have all your information... tap I have verified all my information"), and leaves the user to check the board.
 - `useRecorder` with `autoStop` learns the room's noise floor, then stops after at least 250 ms of speech followed by a 1.3 second pause. If nobody speaks for 8 seconds it drops the clip and asks the user to tap the mic.
 - The transcript is sent straight away. The reply is read aloud, then the mic opens again. The numbers stay visible in the chat and on the family board, where they can be fixed.
 - Tuning constants are at the top of `src/lib/useRecorder.ts`. If it stops too early in a noisy room, raise `SPEECH_ABOVE_FLOOR` or `PAUSE_MS`.

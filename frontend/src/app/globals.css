@@ -41,3 +41,18 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pop-in, .flash, .pulse-ring { animation: none; }
 }
+
+/* Talk mode */
+@keyframes talk-wave {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+.talk-wave { animation: talk-wave 900ms ease-in-out infinite; transform-origin: center; }
+@keyframes talk-glow {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+.talk-glow { animation: talk-glow 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .talk-wave, .talk-glow { animation: none; }
+}
