@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import type { ClaimOutcome, FamilyProfile, Policy, PolicyKind, Recommendation } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { getSummary } from "@/lib/api";
+import type { ClaimOutcome, FamilyProfile, MixSummary, Policy, PolicyKind, Recommendation } from "@/lib/types";
 import { conditionLabel, cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
 import { AlertIcon, CheckIcon, DocIcon, XIcon } from "./icons";
@@ -43,9 +44,27 @@ export function Results({ rec, family, onOpenPolicy, onEditFamily }: Props) {
         </button>
       </header>
 
+      <SummaryBox recId={rec.id} />
       <Compare rec={rec} family={family} />
       <CoverMap rec={rec} family={family} indexOf={indexOf} />
       <ClaimCheck rec={rec} nameOf={nameOf} indexOf={indexOf} />
+
+      {rec.mixCatches.length > 0 && (
+        <div>
+          <h3 className="mb-3 font-semibold text-ink">Catches in this mix</h3>
+          <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
+            {rec.mixCatches.map((c) => (
+              <li key={c.text} className="flex items-start gap-3 px-4 py-3 text-sm text-ink">
+                <AlertIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+                <span className="flex-1">{c.text}</span>
+                <span className="flex shrink-0 -space-x-2">
+                  {c.memberIds.map((id) => <Avatar key={id} name={nameOf(id)} index={indexOf(id)} size="sm" />)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div>
         <h3 className="mb-3 font-semibold text-ink">The {rec.mix.policies.length} policies and their catches</h3>
@@ -56,6 +75,58 @@ export function Results({ rec, family, onOpenPolicy, onEditFamily }: Props) {
         </ul>
       </div>
     </section>
+  );
+}
+
+/** Why this mix and what to watch, in a few lines. Sarvam writes it from the solver's facts. */
+function SummaryBox({ recId }: { recId: string }) {
+  const [result, setResult] = useState<{ id: string; summary: MixSummary | null } | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    getSummary(recId)
+      .then((summary) => live && setResult({ id: recId, summary }))
+      .catch(() => live && setResult({ id: recId, summary: null }));
+    return () => {
+      live = false;
+    };
+  }, [recId]);
+
+  const loading = result?.id !== recId;
+  const summary = loading ? null : result.summary;
+  // The rest of the screen says the same things, so a failed summary just leaves the box out
+  if (!loading && !summary) return null;
+
+  return (
+    <div className="rounded-2xl bg-navy p-4 text-white shadow-sm" aria-live="polite" aria-busy={loading}>
+      <div className="text-xs font-semibold uppercase tracking-wide text-sky">Why this mix</div>
+      {summary ? (
+        <p className="mt-1 text-sm leading-relaxed">{summary.why}</p>
+      ) : (
+        <div className="mt-2 space-y-2" aria-label="Writing a short summary">
+          <div className="h-3 w-full animate-pulse rounded bg-white/15" />
+          <div className="h-3 w-4/5 animate-pulse rounded bg-white/15" />
+        </div>
+      )}
+      {summary && summary.watch.length > 0 && (
+        <>
+          <div className="mt-3 text-xs font-semibold uppercase tracking-wide text-amber">What to watch</div>
+          <ul className="mt-1 space-y-1">
+            {summary.watch.map((w) => (
+              <li key={w} className="flex items-start gap-1.5 text-sm">
+                <AlertIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+                <span>{w}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {summary && (
+        <p className="mt-3 text-[11px] text-white/60">
+          {summary.source === "llm" ? "Written by AI from the solver's results." : "From the solver's results."} Premiums are illustrative.
+        </p>
+      )}
+    </div>
   );
 }
 

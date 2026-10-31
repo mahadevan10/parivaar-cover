@@ -112,10 +112,17 @@ export type Recommendation = {
   saving: number | null;
   /** Facts comparing the mix with the usual pick, in plain sentences. */
   vsUsual: { code: string; text: string }[];
+  /** Catches that come from how the policies stack, most serious first, from the solver. */
+  mixCatches: MixCatch[];
   /** Most each member can claim in a year, from the solver. */
   memberCover: Record<string, number>;
   claimScenarios: ClaimScenario[];
 };
+
+export type MixCatch = { code: string; text: string; memberIds: string[] };
+
+/** Short summary at the top of the results. `source` is "solver" when Sarvam's text was not usable. */
+export type MixSummary = { why: string; watch: string[]; source: "llm" | "solver" };
 
 export type ChatMessage = {
   id: string;

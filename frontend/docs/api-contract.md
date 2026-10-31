@@ -39,6 +39,24 @@ Response:
 
 If `claim_checks` is missing, the UI falls back to `solution.claim_check` as a single year.
 
+`solution.mix_catches` lists catches from how the picks stack (codes in `shared/README.md`), each with `members` and a plain `text`. The results screen shows them under "Catches in this mix". Each pick's `catches` is built by the solver from the policy fields.
+
+## POST /summary
+
+Request: `{ "recommendationId": "rec-..." }`, the id from `/recommend`.
+
+Response:
+
+```json
+{
+  "why": "This mix costs ₹1,07,000 a year, ₹11,000 less than the usual pick. ...",
+  "watch": ["Mohan's diabetes is covered by Senior Citizens Red Carpet after 1 year and by the ManipalCigna top-up after 2 years."],
+  "source": "llm"
+}
+```
+
+Sarvam writes it from the solver's facts. `source` is `"solver"` when Sarvam failed or its text had an amount, percent or name the facts do not, and the text is then the solver's own sentences. The results screen shows it in the box at the top and leaves the box out if the call fails.
+
 ## POST /chat
 
 The LLM talks to the user and pulls family details out of what they say. It does not pick policies or quote prices.
