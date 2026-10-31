@@ -10,7 +10,7 @@ Data and formats used by both the backend and the frontend. Change these only af
 
 ## Policy data
 
-Features follow public brochures and aggregator pages. They have not been checked against the policy wordings, so every policy has `"verified": false`. Premiums are illustrative and set so the demo family prices exactly as in the deck. The UI must say they are illustrative.
+Features follow public brochures and aggregator pages. They have not been checked against the policy wordings, so every policy has `"verified": false`.
 
 Each policy is one product at one sum insured:
 
@@ -47,7 +47,7 @@ Conditions use lowercase names: `diabetes`, `hypertension`, `asthma`, `heart_dis
 
 ## Solver output
 
-See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`), `picks` (policy, members, premium, catches, source, reasons), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `vs_usual`, `mix_catches`, `cover_target`, `cover_check`, `illustrative`.
+See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`), `picks` (policy, members, premium, catches, source, reasons), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `vs_usual`, `mix_catches`, `cover_target`, `cover_check`.
 
 ### Reasons
 

@@ -234,7 +234,6 @@ def solve(family, policies=None):
         "family_id": family["id"],
         "budget": family["budget"],
         "cover_target": target,
-        "illustrative": True,
         "picks": picks,
         "total_premium": total,
         "total_cover": total_cover,
