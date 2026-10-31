@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getSummary } from "@/lib/api";
-import type { ClaimOutcome, CoverCheck, FamilyProfile, MixSummary, Policy, PolicyKind, Recommendation } from "@/lib/types";
+import type { ClaimOutcome, CoverCheck, FamilyProfile, MixSummary, Policy, PolicyKind, Recommendation, Requirements } from "@/lib/types";
 import { conditionLabel, cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
+import { RuleChips } from "./RuleChips";
 import { AlertIcon, CheckIcon, DocIcon, XIcon } from "./icons";
 
 const KIND_LABEL: Record<PolicyKind, string> = {
@@ -19,13 +20,22 @@ const years = (months: number) => (months % 12 === 0 ? `${months / 12} ${months 
 type Props = {
   rec: Recommendation;
   family: FamilyProfile;
+  /** The mix before the last update, so the screen can say what changed and undo it. */
+  previous: { rec: Recommendation; family: FamilyProfile } | null;
+  /** Policy names for rule chips, including plans no longer in the mix. */
+  policyName: (id: string) => string | undefined;
+  expertRequested: boolean;
+  busy: boolean;
   onOpenPolicy: (id: string) => void;
   onEditFamily: () => void;
+  onUndo: () => void;
+  onRemoveRule: (next: Requirements) => void;
 };
 
-export function Results({ rec, family, onOpenPolicy, onEditFamily }: Props) {
+export function Results({ rec, family, previous, policyName, expertRequested, busy, onOpenPolicy, onEditFamily, onUndo, onRemoveRule }: Props) {
   const indexOf = (id: string) => Math.max(0, family.members.findIndex((m) => m.id === id));
-  const nameOf = (id: string) => family.members.find((m) => m.id === id)?.name ?? id;
+  const nameOf = (id: string) =>
+    family.members.find((m) => m.id === id)?.name ?? previous?.family.members.find((m) => m.id === id)?.name ?? id;
 
   return (
     <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 sm:p-6" aria-labelledby="results-title">
@@ -44,6 +54,14 @@ export function Results({ rec, family, onOpenPolicy, onEditFamily }: Props) {
         </button>
       </header>
 
+      {previous && <WhatChanged rec={rec} previous={previous.rec} nameOf={nameOf} onUndo={onUndo} />}
+      <RuleChips requirements={family.requirements} nameOf={nameOf} policyName={policyName} onRemove={onRemoveRule} disabled={busy} />
+      {expertRequested && (
+        <div role="status" className="flex items-start gap-3 rounded-2xl border border-line bg-white p-4 text-sm text-ink">
+          <CheckIcon className="mt-0.5 h-5 w-5 shrink-0 text-sky" />
+          <p>An insurance expert will contact you directly and suggest a floater for what this mix cannot do.</p>
+        </div>
+      )}
       {rec.coverCheck && rec.coverCheck.code !== "cover_met" && <CoverShort check={rec.coverCheck} />}
       <SummaryBox recId={rec.id} />
       <Compare rec={rec} family={family} />
@@ -79,7 +97,48 @@ export function Results({ rec, family, onOpenPolicy, onEditFamily }: Props) {
   );
 }
 
-/** Why this mix and what to watch, in a few lines. Sarvam writes it from the solver's facts. */
+/** How the updated mix differs from the one before: premium, each person's cover, plans in and out. */
+function WhatChanged({ rec, previous, nameOf, onUndo }: {
+  rec: Recommendation;
+  previous: Recommendation;
+  nameOf: (id: string) => string;
+  onUndo: () => void;
+}) {
+  const diff = rec.mix.premium - previous.mix.premium;
+  const key = (p: Policy) => `${p.id}:${[...p.memberIds].sort().join(",")}`;
+  const before = new Set(previous.mix.policies.map(key));
+  const after = new Set(rec.mix.policies.map(key));
+  const added = rec.mix.policies.filter((p) => !before.has(key(p)));
+  const dropped = previous.mix.policies.filter((p) => !after.has(key(p)));
+  const covers = Object.entries(rec.memberCover)
+    .filter(([id, c]) => previous.memberCover[id] !== c)
+    .map(([id, c]) =>
+      previous.memberCover[id] === undefined
+        ? `${nameOf(id)} gets ${cover(c)}.`
+        : `${nameOf(id)}: ${cover(previous.memberCover[id])} to ${cover(c)}.`,
+    );
+  const plans = (ps: Policy[]) => ps.map((p) => `${p.product} for ${p.memberIds.map(nameOf).join(", ")}`).join("; ");
+
+  return (
+    <div role="status" className="rounded-2xl border border-sky bg-sky-soft p-4 text-sm text-ink">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="font-semibold text-navy">
+          What changed: {diff === 0 ? "same premium" : `${rupees(Math.abs(diff))} a year ${diff > 0 ? "more" : "less"}`}
+        </div>
+        <button type="button" onClick={onUndo} className="text-sm font-medium text-sky hover:underline">
+          Undo
+        </button>
+      </div>
+      <ul className="mt-1 space-y-0.5">
+        {covers.length > 0 && <li>Cover: {covers.join(" ")}</li>}
+        {added.length > 0 && <li>New: {plans(added)}.</li>}
+        {dropped.length > 0 && <li>Dropped: {plans(dropped)}.</li>}
+        {covers.length === 0 && added.length === 0 && dropped.length === 0 && <li>The same policies and cover as before.</li>}
+      </ul>
+    </div>
+  );
+}
+
 /** The budget kept cover below what the family asked for. Says by how much and what budget would reach it. */
 function CoverShort({ check }: { check: CoverCheck }) {
   return (
@@ -91,13 +150,14 @@ function CoverShort({ check }: { check: CoverCheck }) {
         </div>
         <p>{check.text}</p>
         {check.budgetNeeded != null && (
-          <p className="text-muted">Premiums are illustrative, so this budget is too. To try another budget, tap Edit family and tell me the new amount.</p>
+          <p className="text-muted">Premiums are illustrative, so this budget is too. To try another budget, tell me the new amount in the chat.</p>
         )}
       </div>
     </div>
   );
 }
 
+/** Why this mix and what to watch, in a few lines. Sarvam writes it from the solver's facts. */
 function SummaryBox({ recId }: { recId: string }) {
   const [result, setResult] = useState<{ id: string; summary: MixSummary | null } | null>(null);
 

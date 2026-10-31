@@ -143,6 +143,84 @@ class CoverTarget(unittest.TestCase):
         self.assertEqual(result["total_premium"], 107000)
 
 
+class Requirements(unittest.TestCase):
+    def solve(self, budget=None, **rules):
+        family = dict(FAMILIES["demo-pune"], requirements=rules)
+        if budget:
+            family["budget"] = budget
+        return solver.solve(family, POLICIES)
+
+    def bases(self, result, mid):
+        return [p for p in result["picks"] if mid in p["members"]]
+
+    def test_min_cover_for_one_person(self):
+        result = self.solve(min_cover={"mohan": 5000000})
+        self.assertGreaterEqual(result["member_cover"]["mohan"], 5000000)
+        self.assertIn("You asked for at least ₹50 lakh for Mohan.", result["requirement_notes"][0]["text"])
+
+    def test_no_copay(self):
+        result = self.solve(max_copay_percent=0)
+        self.assertTrue(all(p["copay_percent"] == 0 for p in result["picks"]))
+        self.assertEqual(result["requirement_notes"][0]["text"], "No plan in this mix has a co-pay.")
+
+    def test_uncapped_room_rent(self):
+        result = self.solve(uncapped_room_rent=True)
+        policies = {p["id"]: p for p in POLICIES}
+        self.assertFalse(any(policies[p["policy_id"]]["room_rent"]["capped"] for p in result["picks"]))
+
+    def test_one_insurer(self):
+        result = self.solve(one_insurer=True)
+        self.assertEqual(len({p["insurer"] for p in result["picks"]}), 1)
+
+    def test_avoid_insurers(self):
+        result = self.solve(avoid_insurers=["Star Health"])
+        self.assertNotIn("Star Health", {p["insurer"] for p in result["picks"]})
+
+    def test_avoid_policies_and_plan_types(self):
+        result = self.solve(avoid_policies=["star-red-carpet-10l"], avoid_plan_types=["super_topup"])
+        self.assertNotIn("star-red-carpet-10l", {p["policy_id"] for p in result["picks"]})
+        self.assertNotIn("super_topup", {p["plan_type"] for p in result["picks"]})
+
+    def test_max_policies(self):
+        self.assertLessEqual(len(self.solve(max_policies=2)["picks"]), 2)
+
+    def test_max_wait(self):
+        result = self.solve(max_wait_months={"mohan": 12})
+        policies = {p["id"]: p for p in POLICIES}
+        for pick in self.bases(result, "mohan"):
+            self.assertLessEqual(solver.condition_wait(policies[pick["policy_id"]], ["diabetes"]), 12)
+
+    def test_min_cover_over_budget_says_what_it_needs(self):
+        result = self.solve(min_cover={"mohan": 15000000})
+        self.assertEqual((result["status"], result["reason"]), ("no_fit", "budget"))
+        again = self.solve(budget=result["budget_needed"], min_cover={"mohan": 15000000})
+        self.assertEqual(again["status"], "ok")
+        self.assertGreaterEqual(again["member_cover"]["mohan"], 15000000)
+
+    def test_budget_needed_keeps_everyone_elses_cover(self):
+        family = dict(FAMILIES["demo-pune"], requirements={"min_cover": {"mohan": 15000000}})
+        floors = {mid: c for mid, c in solver.solve(FAMILIES["demo-pune"], POLICIES)["member_cover"].items() if mid != "mohan"}
+        needed = solver.budget_needed(family, floors, POLICIES)
+        self.assertGreater(needed, solver.budget_needed(family, None, POLICIES))
+        result = solver.solve(dict(family, budget=needed), POLICIES)
+        for mid, cover in floors.items():
+            self.assertGreaterEqual(result["member_cover"][mid], cover)
+
+    def test_rules_no_mix_can_meet(self):
+        result = self.solve(min_cover={"mohan": 50000000})
+        self.assertEqual((result["status"], result["reason"], result["budget_needed"]), ("no_fit", "rules", None))
+
+    def test_cover_target_follows_the_rules(self):
+        result = self.solve(budget=60000, avoid_plan_types=["super_topup"])
+        self.assertNotIn("super_topup", {p["plan_type"] for p in result["picks"]})
+        self.assertEqual(result["cover_check"]["code"], "cover_short")
+        again = self.solve(budget=result["cover_check"]["budget_needed"], avoid_plan_types=["super_topup"])
+        self.assertEqual(again["cover_check"]["code"], "cover_met")
+
+    def test_no_rules_keeps_the_deck_mix(self):
+        self.assertEqual(self.solve()["total_premium"], 107000)
+
+
 class OtherFamilies(unittest.TestCase):
     def check_valid(self, family_id):
         family = FAMILIES[family_id]

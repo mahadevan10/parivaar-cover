@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatMessage, FamilyProfile, Policy, Recommendation, Stage } from "@/lib/types";
-import { getRecommendation, NoFitError, sendChat } from "@/lib/api";
+import type { ChatMessage, FamilyProfile, Policy, Proposal, Recommendation, Requirements, Stage } from "@/lib/types";
+import { getQuote, getRecommendation, NoFitError, sendChat } from "@/lib/api";
 import { missingList, VERIFIED } from "@/lib/family";
 import { cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
@@ -25,6 +25,17 @@ const WELCOME: ChatMessage = {
 
 // Only the verify button on the board (or a retry) starts the search.
 const START_SEARCH = /^(i have verified all my information|find my mix|try again)[.!]?$/i;
+
+// After the mix is shown, a change is quoted first. These replies act on the quote without asking the backend.
+const UPDATE_MIX = "Update my mix";
+const KEEP_MIX = "Keep this mix";
+const YES = /^(yes|yes please|ok|okay|sure|go ahead|update|update it|haan|haan ji|ha|ji)[.!]?$/i;
+const RAISE_BUDGET = /^raise budget to /i;
+
+const EXPERT_TEXT =
+  "Your requirement needs help from an insurance expert. An expert will contact you directly and suggest a floater that fits your family.";
+
+type Snapshot = { rec: Recommendation; family: FamilyProfile };
 
 /** The backend adds this when intake is done. The app says it in its own words instead. */
 const BACKEND_READY_LINE = /I have everything I need to find your options\.?/i;
@@ -71,6 +82,11 @@ export function App() {
   const [changed, setChanged] = useState<Set<string>>(new Set());
   const [mobileView, setMobileView] = useState<"chat" | "board">("chat");
   const [talkMode, setTalkMode] = useState(false);
+  // A priced change waiting for "Update my mix", and the mix before the last update, for Undo
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [previous, setPrevious] = useState<Snapshot | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [expertRequested, setExpertRequested] = useState(false);
 
   const familyRef = useRef(family);
   useEffect(() => {
@@ -80,6 +96,8 @@ export function App() {
   const applyFamily = useCallback((next: FamilyProfile) => {
     setChanged(diffFamily(familyRef.current, next));
     setFamily(next);
+    // findMix may run before the next render, so it must see the new family now
+    familyRef.current = next;
   }, []);
 
   useEffect(() => {
@@ -93,25 +111,38 @@ export function App() {
   // The solver's answer waits here until the optimise screen has ticked every step.
   const [pending, setPending] = useState<Recommendation | null>(null);
 
-  const findMix = useCallback(async () => {
+  /** Runs the solver. With `restore`, this is an update to a mix already shown, put back if it fails. */
+  const findMix = useCallback(async (restore?: Snapshot) => {
     setMobileView("board");
     setQuickReplies([]);
     setPending(null);
-    setStage("fine_print");
+    setUpdating(Boolean(restore));
+    setStage(restore ? "optimise" : "fine_print");
     try {
       setPending(await getRecommendation(familyRef.current, sessionId()));
     } catch (e) {
       console.error("Find my mix failed", e);
-      setStage("talk");
+      const rules = e instanceof NoFitError && e.reason === "rules";
+      if (rules) setExpertRequested(true);
+      if (restore) {
+        setRec(restore.rec);
+        applyFamily(restore.family);
+        setPrevious(null);
+        setStage("explain");
+      } else {
+        setStage("talk");
+      }
       push({
         role: "assistant",
-        text: e instanceof NoFitError
-          ? "No mix fits this budget. Try a higher budget, or tell me if anyone already has cover."
-          : "I couldn't reach the optimiser just now. Please try again.",
+        text: rules
+          ? `${EXPERT_TEXT}${restore ? " Your current mix stays as it is." : ""}`
+          : e instanceof NoFitError
+            ? "No mix fits this budget. Try a higher budget, or tell me if anyone already has cover."
+            : `I couldn't reach the optimiser just now. ${restore ? "Your current mix stays as it is." : "Please try again."}`,
       });
-      setQuickReplies(["Try again"]);
+      setQuickReplies(restore || rules ? [] : ["Try again"]);
     }
-  }, []);
+  }, [applyFamily]);
 
   const finePrintRead = useCallback(() => setStage("optimise"), []);
 
@@ -120,6 +151,14 @@ export function App() {
     setRec(pending);
     setPending(null);
     setStage("explain");
+    if (updating) {
+      push({
+        role: "assistant",
+        text: `Your mix is updated. ${pending.mix.policies.length} policies for ${rupees(pending.mix.premium)} a year with ${cover(pending.mix.totalCover)} of total cover. Premiums are illustrative. You can undo this on the right.`,
+      });
+      setQuickReplies(["What are the catches?"]);
+      return;
+    }
     const short = pending.coverCheck && pending.coverCheck.code !== "cover_met" ? ` ${pending.coverCheck.text}` : "";
     const usualLine = pending.usual
       ? `The usual pick is one floater at ${rupees(pending.usual.premium)} for ${cover(pending.usual.totalCover)}.`
@@ -129,10 +168,36 @@ export function App() {
       text: `Here is your mix. ${pending.mix.policies.length} policies for ${rupees(pending.mix.premium)} a year with ${cover(pending.mix.totalCover)} of total cover.${short} ${usualLine} Premiums are illustrative. Ask me about any pick, or try the claim check.`,
     });
     setQuickReplies(["Why not one floater?", "What is a super top-up?", "What are the catches?"]);
-  }, [pending]);
+  }, [pending, updating]);
+
+  /** Runs the solver on the proposed family. The mix before stays in `previous` for Undo. */
+  const updateMix = useCallback((next: FamilyProfile) => {
+    if (!rec) return;
+    const before = { rec, family: familyRef.current };
+    setPrevious(before);
+    setProposal(null);
+    applyFamily(next);
+    void findMix(before);
+  }, [rec, applyFamily, findMix]);
 
   const send = useCallback(async (text: string, meta: SendMeta) => {
-    if (START_SEARCH.test(text.trim()) && ready && !rec) {
+    const said = text.trim();
+    if (rec && proposal?.ready) {
+      const raise = RAISE_BUDGET.test(said) && proposal.raiseBudgetTo;
+      if (said === UPDATE_MIX || YES.test(said) || raise) {
+        push({ role: "user", text, via: meta.via, language: meta.language });
+        updateMix(raise ? { ...proposal.family, budget: proposal.raiseBudgetTo! } : proposal.family);
+        return;
+      }
+    }
+    if (rec && proposal && said === KEEP_MIX) {
+      push({ role: "user", text, via: meta.via, language: meta.language });
+      setProposal(null);
+      setQuickReplies([]);
+      push({ role: "assistant", text: "Okay, your mix stays as it is." });
+      return;
+    }
+    if (START_SEARCH.test(said) && ready && !rec) {
       push({ role: "user", text, via: meta.via, language: meta.language });
       void findMix();
       return;
@@ -146,11 +211,21 @@ export function App() {
       const res = await sendChat({
         sessionId: sessionId(),
         message: text,
-        family: familyRef.current,
+        // A change being put together is sent back, so the next message adds to it
+        family: (rec && proposal?.family) || familyRef.current,
         history,
         recommendationId: rec?.id,
         language: meta.language,
       });
+      if (res.expertRequested) setExpertRequested(true);
+      if (rec) {
+        // The mix stays as it is until the user updates it, so the board keeps its family
+        if (res.proposal !== undefined) setProposal(res.proposal);
+        const waiting = res.proposal === undefined && proposal?.ready;
+        setQuickReplies(waiting ? [UPDATE_MIX, KEEP_MIX] : res.quickReplies);
+        if (res.reply) push({ role: "assistant", text: res.reply, citations: res.citations });
+        return;
+      }
       applyFamily(res.family);
       setMissing(res.missing);
       setReady(res.readyToOptimise);
@@ -175,7 +250,35 @@ export function App() {
     } finally {
       setLoading(false);
     }
-  }, [messages, rec, ready, talkMode, applyFamily, findMix]);
+  }, [messages, rec, ready, talkMode, proposal, applyFamily, findMix, updateMix]);
+
+  const undo = () => {
+    if (!previous) return;
+    setRec(previous.rec);
+    applyFamily(previous.family);
+    setPrevious(null);
+    setProposal(null);
+    setQuickReplies([]);
+    push({ role: "assistant", text: "Your previous mix is back." });
+  };
+
+  /** Removing a rule chip on the results is priced the same way as a change asked for in the chat. */
+  const removeRule = async (requirements: Requirements) => {
+    if (!rec) return;
+    setLoading(true);
+    setMobileView("chat");
+    try {
+      const res = await getQuote({ ...familyRef.current, requirements }, sessionId(), rec.id);
+      push({ role: "assistant", text: res.reply });
+      setProposal(res.proposal ?? null);
+      setQuickReplies(res.quickReplies);
+      if (res.expertRequested) setExpertRequested(true);
+    } catch {
+      push({ role: "assistant", text: "I couldn't price that change just now. Please try again." });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Board edits are local. Recheck what's missing straight away.
   const editFamily = (next: FamilyProfile) => {
@@ -187,24 +290,38 @@ export function App() {
 
   const backToFamily = () => {
     setRec(null);
+    setProposal(null);
+    setPrevious(null);
     setStage("talk");
     setQuickReplies([]);
   };
 
   const policies: Record<string, Policy> = Object.fromEntries(
-    [...(rec?.mix.policies ?? []), ...(rec?.usual?.policies ?? [])].map((p) => [p.id, p]),
+    [...(previous?.rec.mix.policies ?? []), ...(rec?.mix.policies ?? []), ...(rec?.usual?.policies ?? [])].map((p) => [p.id, p]),
   );
   const policyNames = Object.fromEntries(Object.values(policies).map((p) => [p.id, p.product]));
   const canvas =
     stage === "fine_print" || stage === "optimise" ? (
       <Optimising
         memberCount={family.members.length}
+        quick={updating}
         finished={pending !== null}
         onFinePrintRead={finePrintRead}
         onComplete={showResult}
       />
     ) : rec && stage === "explain" ? (
-      <Results rec={rec} family={family} onOpenPolicy={setOpenPolicy} onEditFamily={backToFamily} />
+      <Results
+        rec={rec}
+        family={family}
+        previous={previous}
+        policyName={(id) => policies[id] && `${policies[id].insurer} ${policies[id].product}`}
+        expertRequested={expertRequested}
+        busy={loading}
+        onOpenPolicy={setOpenPolicy}
+        onEditFamily={backToFamily}
+        onUndo={undo}
+        onRemoveRule={removeRule}
+      />
     ) : (
       <FamilyBoard
         family={family}
@@ -261,7 +378,7 @@ export function App() {
             loading={loading}
             quickReplies={quickReplies}
             policyNames={policyNames}
-            placeholder={rec ? "Ask about any pick or catch" : "Type, or tap the mic to speak"}
+            placeholder={rec ? "Ask about a pick, or tell me what to change" : "Type, or tap the mic to speak"}
             onSend={send}
             onOpenPolicy={setOpenPolicy}
             talkMode={talkMode}

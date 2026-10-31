@@ -1,4 +1,5 @@
-"""SQLite storage for policies, chat turns, the family each session builds up, and recommendations.
+"""SQLite storage for policies, chat turns, the family each session builds up, recommendations, and
+requests for an insurance expert when the AI cannot meet what the user asked for.
 
 The database is backend/parivaar.db, or the file named by PARIVAAR_DB. Families are stored as JSON
 after the Pydantic models in app.py have checked them, so they stay in the shared/families.json format.
@@ -71,6 +72,16 @@ CREATE TABLE IF NOT EXISTS policies (
 );
 CREATE INDEX IF NOT EXISTS policies_plan_type ON policies (plan_type, sum_insured);
 
+-- Requests the AI could not meet, for an insurance expert to follow up
+CREATE TABLE IF NOT EXISTS expert_requests (
+    id INTEGER PRIMARY KEY,
+    session_id TEXT,
+    family TEXT NOT NULL,            -- the family and rules as JSON, as the user asked for them
+    message TEXT,                    -- what the user said, if it came from the chat
+    reason TEXT NOT NULL,            -- what could not be met, or no_plan_meets_rules
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -138,6 +149,19 @@ def recommendation_family(rec_id):
     with closing(connect()) as conn:
         row = conn.execute("SELECT family FROM recommendations WHERE id = ?", (rec_id,)).fetchone()
     return json.loads(row["family"]) if row else None
+
+
+def save_expert_request(session_id, family, message, reason):
+    with closing(connect()) as conn, conn:
+        conn.execute("INSERT INTO expert_requests (session_id, family, message, reason) VALUES (?, ?, ?, ?)",
+                     (session_id, json.dumps(family, ensure_ascii=False), message, reason))
+
+
+def expert_requests(session_id=None):
+    with closing(connect()) as conn:
+        rows = conn.execute("SELECT session_id, family, message, reason, created_at FROM expert_requests "
+                            "WHERE ? IS NULL OR session_id = ? ORDER BY id", (session_id, session_id)).fetchall()
+    return [dict(r, family=json.loads(r["family"])) for r in rows]
 
 
 def save_summary(rec_id, summary):

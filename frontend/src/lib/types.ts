@@ -32,6 +32,38 @@ export type FamilyProfile = {
   coverTarget?: number;
   /** True once the user has given a cover amount or said they are not sure. */
   coverChecked?: boolean;
+  /** Rules the user set for the plans. The solver keeps every one. */
+  requirements?: Requirements;
+};
+
+/** What the user asked of the plans beyond the budget and total cover. Fields follow shared/README.md. */
+export type Requirements = {
+  /** Member id to the least cover in rupees for that person. */
+  minCover?: Record<string, number>;
+  /** Member id to the most months before that person's existing conditions are covered. */
+  maxWaitMonths?: Record<string, number>;
+  /** 0 means no co-pay. */
+  maxCopayPercent?: number | null;
+  uncappedRoomRent?: boolean;
+  avoidInsurers?: string[];
+  oneInsurer?: boolean;
+  /** Policy ids to leave out. */
+  avoidPolicies?: string[];
+  avoidPlanTypes?: PolicyKind[];
+  maxPolicies?: number | null;
+};
+
+/** A change the solver has priced. Nothing changes until the user taps "Update my mix". */
+export type Proposal = {
+  /** The family with the change made, rules included. */
+  family: FamilyProfile;
+  /** False while a detail is still needed, like a new person's age. No price yet then. */
+  ready: boolean;
+  changes: string[];
+  premium?: number;
+  premiumChange?: number;
+  /** Set when a cover target is short: the budget that reaches it. */
+  raiseBudgetTo?: number | null;
 };
 
 export type ChatTurn = {
@@ -59,6 +91,10 @@ export type ChatResponse = {
   readyToOptimise: boolean;
   /** Policy ids the reply relies on. The UI shows them as tappable fine-print chips. */
   citations?: string[];
+  /** Set on a change request after the mix is shown. Null when the change could not be priced. */
+  proposal?: Proposal | null;
+  /** True when the request was passed to an insurance expert. */
+  expertRequested?: boolean;
 };
 
 export type PolicyKind = "floater" | "individual" | "senior" | "super_topup";

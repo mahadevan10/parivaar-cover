@@ -12,7 +12,7 @@ Request:
 { "family": SolverFamily }
 ```
 
-`SolverFamily` is the family input format from `shared/README.md` (`id`, `city`, `budget`, `cover_target`, `members[]`, `office_cover[]`). `cover_target` is the total cover the family wants, or `null` when they are not sure. Conditions use `diabetes`, `hypertension`, `asthma`, `heart_disease`. Relation for a wife or husband is sent as `spouse`. Member ids come from the frontend and must be echoed back unchanged.
+`SolverFamily` is the family input format from `shared/README.md` (`id`, `city`, `budget`, `cover_target`, `members[]`, `office_cover[]`). `cover_target` is the total cover the family wants, or `null` when they are not sure. `requirements` holds the user's rules for the plans (`min_cover`, `max_copay_percent` and the rest in `shared/README.md`). Conditions use `diabetes`, `hypertension`, `asthma`, `heart_disease`. Relation for a wife or husband is sent as `spouse`. Member ids come from the frontend and must be echoed back unchanged.
 
 Response:
 
@@ -75,6 +75,30 @@ Request:
 }
 ```
 
+After a recommendation, a message that asks to change something (an age, the budget, a rule like "no co-pay") is not answered as a question. The response then has a `proposal`, priced by the solver:
+
+```json
+{
+  "reply": "Mohan's age is now 66. Your mix becomes 5 policies at ₹1,12,000 a year, ₹5,000 more than now. Premiums are illustrative.",
+  "family": "the request's family, unchanged",
+  "quickReplies": ["Update my mix", "Keep this mix"],
+  "proposal": {
+    "family": FamilyProfile,
+    "ready": true,
+    "changes": ["Mohan's age is now 66."],
+    "premium": 112000,
+    "premiumChange": 5000,
+    "raiseBudgetTo": null
+  },
+  "expertRequested": false
+}
+```
+
+- The UI keeps the mix until the user taps "Update my mix", then runs `/recommend` with `proposal.family`. "Keep this mix" drops the proposal. Both are handled in the UI.
+- `ready: false` means a detail is still needed, like a new person's age. There is no price yet. Send `proposal.family` as `family` on the next message, so the change builds up.
+- `raiseBudgetTo` is set when a new cover target is short on budget. The quick reply "Raise budget to ₹X" updates with that budget.
+- `proposal` is `null` when nothing could be priced. `expertRequested: true` means the request was passed to an insurance expert (something no rule can express, or rules no mix meets). It can come back during intake too.
+
 `language` is set when the message was spoken: the language Sarvam detected. The reply should be in that language. It is missing for typed messages.
 
 Response:
@@ -109,6 +133,10 @@ Response:
 - `heardFrom` is the phrase the details came from. Optional.
 - `coverChecked` is true once the user gave a cover amount or picked the "Not sure" quick reply. "Cover you want" stays in `missing` until then.
 - `citations` are `policy_id`s from the current solution. The UI turns them into "fine print" chips.
+
+## POST /quote
+
+Request: `{ "sessionId": "...", "family": FamilyProfile, "recommendationId": "rec-...", "language": "hi-IN" }`, with the change already made to `family`. The results screen calls it when a rule chip is removed. The response has the same shape as a change from `/chat`.
 
 ## CORS
 

@@ -19,7 +19,15 @@ export function sendChat(req: ChatRequest): Promise<ChatResponse> {
   return post<ChatResponse>("/chat", req);
 }
 
-export class NoFitError extends Error {}
+export class NoFitError extends Error {
+  /** "rules" when no mix meets the user's rules at any price, so an expert follows up. */
+  reason: "budget" | "rules";
+
+  constructor(reason: "budget" | "rules" = "budget") {
+    super(reason === "rules" ? "No mix meets these rules." : "No mix fits this budget.");
+    this.reason = reason;
+  }
+}
 
 /** Runs the solver. The backend returns its own output format, mapped here. */
 export async function getRecommendation(family: FamilyProfile, sessionId: string): Promise<Recommendation> {
@@ -28,13 +36,18 @@ export async function getRecommendation(family: FamilyProfile, sessionId: string
     "/recommend",
     { family: solverFamily, claims: claimsFor(solverFamily) },
   );
-  if (solution.status !== "ok") throw new NoFitError("No mix fits this budget.");
+  if (solution.status !== "ok") throw new NoFitError(solution.reason);
   return toRecommendation(solution, claim_checks, id);
 }
 
 /** Short why-this-mix and what-to-watch, written by Sarvam from the solver's facts. */
 export function getSummary(recommendationId: string): Promise<MixSummary> {
   return post<MixSummary>("/summary", { recommendationId });
+}
+
+/** Prices a change made on the results screen, like removing a rule. Same reply shape as /chat. */
+export function getQuote(family: FamilyProfile, sessionId: string, recommendationId: string, language?: string): Promise<ChatResponse> {
+  return post<ChatResponse>("/quote", { sessionId, family, recommendationId, language });
 }
 
 export type Transcript = { transcript: string; languageCode?: string };
