@@ -38,9 +38,9 @@ The deck (`stage1_ppt/slide_content.md`, slide 5) planned this stack. For a 6-ho
 
 | Layer | Planned in the deck | Hackathon build |
 |---|---|---|
-| Frontend | React web, React Native mini-app | TBD |
+| Frontend | React web, React Native mini-app | Next.js 16 (App Router), TypeScript, Tailwind 4 in `frontend/`. Mock backend built in until the API is live. |
 | Backend / solver | Python + FastAPI, Google OR-Tools | TBD |
-| AI | Claude Sonnet 5.5; Bhashini / Sarvam for Indian languages | TBD |
+| AI | Claude Sonnet 5.5; Bhashini / Sarvam for Indian languages | Voice input: Sarvam AI speech-to-text (`saaras:v4`, auto language detect) via `frontend/src/app/api/stt`. LLM: TBD (backend). |
 | Policy data | PostgreSQL + pgvector, PDF parsing | TBD (a JSON seed file is fine) |
 
 ## Repo layout and ownership
@@ -48,7 +48,7 @@ The deck (`stage1_ppt/slide_content.md`, slide 5) planned this stack. For a 6-ho
 | Path | What it holds | Owner |
 |---|---|---|
 | `backend/` | API, optimizer, LLM calls | TBD |
-| `frontend/` | User-facing app | TBD |
+| `frontend/` | User-facing app: chat, voice, family board, results | Chat and voice UI developer |
 | `shared/` | API contract and the policy data both sides use | Both, change only after agreeing |
 | `stage1_ppt/` | Stage 1 pitch deck (finished, see `stage1_ppt/CLAUDE.md`) | Don't edit |
 
@@ -56,7 +56,18 @@ The deck (`stage1_ppt/slide_content.md`, slide 5) planned this stack. For a 6-ho
 
 ## Running locally
 
-TBD: add the run commands, ports and required env vars as soon as each side boots.
+**Frontend** (port 3000):
+
+```bash
+cd frontend
+cp .env.example .env.local   # set SARVAM_API_KEY; set NEXT_PUBLIC_API_BASE_URL to use the real backend
+npm install
+npm run dev
+```
+
+Context for the frontend lives in `frontend/CONTEXT.md`. Run `/update-context` to refresh it.
+
+**Backend:** TBD.
 
 Secrets go in `.env`, which is gitignored. Commit a `.env.example` listing every variable without values, and share the real keys outside git.
 
