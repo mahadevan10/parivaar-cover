@@ -15,9 +15,13 @@ type Props = {
   placeholder: string;
   onSend: (text: string, meta: SendMeta) => void;
   onOpenPolicy: (id: string) => void;
+  talkMode: boolean;
+  onTalkModeChange: (on: boolean) => void;
 };
 
-export function ChatPanel({ messages, loading, quickReplies, policyNames, placeholder, onSend, onOpenPolicy }: Props) {
+export function ChatPanel({
+  messages, loading, quickReplies, policyNames, placeholder, onSend, onOpenPolicy, talkMode, onTalkModeChange,
+}: Props) {
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -27,7 +31,6 @@ export function ChatPanel({ messages, loading, quickReplies, policyNames, placeh
   // In talk mode the mic opens again once the reply has been read.
   const speaker = useSpeaker();
   const { speak } = speaker;
-  const [talkMode, setTalkMode] = useState(false);
   const [muted, setMuted] = useState(false);
   const [listenToken, setListenToken] = useState(0);
   const prefs = useRef({ talkMode, muted });
@@ -37,9 +40,13 @@ export function ChatPanel({ messages, loading, quickReplies, policyNames, placeh
   const spoken = useRef(new Set(messages.map((m) => m.id)));
 
   useEffect(() => {
-    const last = messages.at(-1);
-    if (!last || last.role !== "assistant" || spoken.current.has(last.id)) return;
-    spoken.current.add(last.id);
+    // Every reply since the user's last message, read as one.
+    const fresh: ChatMessage[] = [];
+    for (let i = messages.length - 1; i >= 0 && messages[i].role === "assistant"; i--) {
+      if (!spoken.current.has(messages[i].id)) fresh.unshift(messages[i]);
+    }
+    if (fresh.length === 0) return;
+    fresh.forEach((m) => spoken.current.add(m.id));
     const user = messages.findLast((m) => m.role === "user");
     const { talkMode: talking, muted: silent } = prefs.current;
     if (!talking && user?.via !== "voice") return;
@@ -50,12 +57,11 @@ export function ChatPanel({ messages, loading, quickReplies, policyNames, placeh
       queueMicrotask(listenAgain);
       return;
     }
-    void speak(last.text, user?.language).then((r) => r === "done" && listenAgain());
+    void speak(fresh.map((m) => m.text).join(" "), user?.language).then((r) => r === "done" && listenAgain());
   }, [messages, speak]);
 
-  const toggleTalkMode = () => {
-    const on = !talkMode;
-    setTalkMode(on);
+  const setTalk = (on: boolean) => {
+    onTalkModeChange(on);
     if (on) setListenToken((t) => t + 1);
     else speaker.stop();
   };
@@ -68,40 +74,25 @@ export function ChatPanel({ messages, loading, quickReplies, policyNames, placeh
     }
   };
 
-  const toolbar = (
+  // Outside talk mode, a small bar to stop or mute a reply being read.
+  const toolbar = speaker.speaking && !talkMode && (
     <div className="mb-2 flex items-center gap-2">
       <button
         type="button"
-        role="switch"
-        aria-checked={talkMode}
-        onClick={toggleTalkMode}
-        className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-          talkMode ? "border-sky bg-sky-soft text-navy" : "border-line text-muted hover:text-navy"
-        }`}
+        onClick={speaker.stop}
+        className="pop-in flex items-center gap-1.5 rounded-full bg-navy-soft px-2.5 py-1 text-xs text-navy hover:bg-sky-soft"
       >
-        <span className={`relative h-3.5 w-6 rounded-full transition ${talkMode ? "bg-sky" : "bg-line"}`} aria-hidden="true">
-          <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-white transition-all ${talkMode ? "left-3" : "left-0.5"}`} />
-        </span>
-        Talk mode
+        <SpeakerIcon className="h-3.5 w-3.5 animate-pulse text-sky" />
+        Reading aloud. Tap to stop.
       </button>
-      {speaker.speaking && (
-        <button
-          type="button"
-          onClick={speaker.stop}
-          className="pop-in flex items-center gap-1.5 rounded-full bg-navy-soft px-2.5 py-1 text-xs text-navy hover:bg-sky-soft"
-        >
-          <SpeakerIcon className="h-3.5 w-3.5 animate-pulse text-sky" />
-          Reading aloud. Tap to stop.
-        </button>
-      )}
       <button
         type="button"
         onClick={toggleMuted}
-        aria-label={muted ? "Read replies aloud" : "Mute replies"}
-        title={muted ? "Read replies aloud" : "Mute replies"}
+        aria-label="Mute replies"
+        title="Mute replies"
         className="ml-auto rounded-full p-1.5 text-muted hover:bg-canvas hover:text-navy"
       >
-        {muted ? <SpeakerOffIcon className="h-4 w-4" /> : <SpeakerIcon className="h-4 w-4" />}
+        <SpeakerOffIcon className="h-4 w-4" />
       </button>
     </div>
   );
@@ -145,6 +136,10 @@ export function ChatPanel({ messages, loading, quickReplies, policyNames, placeh
         listenToken={listenToken}
         onMicStart={speaker.stop}
         toolbar={toolbar}
+        speaking={speaker.speaking}
+        muted={muted}
+        onToggleMute={toggleMuted}
+        onTalkMode={setTalk}
       />
     </div>
   );

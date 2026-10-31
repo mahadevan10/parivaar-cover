@@ -11,3 +11,6 @@ export function missingList(family: FamilyProfile): string[] {
   if (!family.officeChecked) out.push("Office cover");
   return out;
 }
+
+/** The board's verify button. Tapping it starts the search. */
+export const VERIFIED = "I have verified all my information";

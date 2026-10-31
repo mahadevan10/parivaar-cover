@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FamilyProfile, Member } from "@/lib/types";
 import { conditionLabel, cover, rupees } from "@/lib/format";
+import { VERIFIED } from "@/lib/family";
 import { Avatar } from "./Avatar";
 import { CheckIcon, MicIcon, PlusIcon, XIcon } from "./icons";
 
@@ -89,7 +90,7 @@ export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange
             ready && !busy ? "ring-4 ring-sky/40 animate-pulse" : ""
           }`}
         >
-          {ready ? "Find my mix" : `Find my mix (${missing.length} ${missing.length === 1 ? "detail" : "details"} to go)`}
+          {ready ? VERIFIED : `${missing.length} more ${missing.length === 1 ? "detail" : "details"} needed`}
         </button>
       </div>
     </section>
@@ -101,7 +102,7 @@ function Readiness({ missing, ready, empty }: { missing: string[]; ready: boolea
   if (ready) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
-        <CheckIcon className="h-4 w-4" /> Ready to find your mix
+        <CheckIcon className="h-4 w-4" /> All details are in. Check them, then verify below.
       </span>
     );
   }
