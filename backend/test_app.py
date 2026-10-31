@@ -3,9 +3,11 @@
 Sarvam is replaced with a stub, so these tests run offline. Storage goes to a temporary SQLite file.
 """
 import copy
+import json
 import os
 import tempfile
 import unittest
+from contextlib import closing
 from unittest import mock
 
 from fastapi.testclient import TestClient
@@ -197,6 +199,33 @@ class Storage(unittest.TestCase):
             row = conn.execute("SELECT session_id, family FROM recommendations WHERE id = ?", (rec["id"],)).fetchone()
         self.assertEqual(row["session_id"], "store-4")
         self.assertEqual(app.Family.model_validate_json(row["family"]).members[3].conditions, ["diabetes"])
+
+
+class PolicyStore(unittest.TestCase):
+    def test_policies_match_the_json_file_in_order(self):
+        on_disk = json.loads(store.POLICIES_JSON.read_text())["policies"]
+        self.assertEqual(store.policies(), on_disk)
+
+    def test_columns_can_be_queried(self):
+        with closing(store.connect()) as conn:
+            store.sync_policies(conn)
+            row = conn.execute("SELECT plan_type, sum_insured, diabetes_wait_months, policy FROM policies "
+                               "WHERE id = 'star-comprehensive-25l-floater'").fetchone()
+        self.assertEqual((row["plan_type"], row["sum_insured"], row["diabetes_wait_months"]), ("floater", 2500000, 36))
+
+    def test_rebuilds_when_the_file_changes(self):
+        data = json.loads(store.POLICIES_JSON.read_text())
+        data["policies"] = data["policies"][:2]
+        data["policies"][0]["copay_percent"] = 20
+        path = os.path.join(tempfile.mkdtemp(), "policies.json")
+        with open(path, "w") as f:
+            json.dump(data, f)
+        with closing(store.connect()) as conn:
+            store.sync_policies(conn, path)
+            rows = conn.execute("SELECT copay_percent FROM policies ORDER BY position").fetchall()
+            self.assertEqual([r["copay_percent"] for r in rows], [20, data["policies"][1]["copay_percent"]])
+            store.sync_policies(conn)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM policies").fetchone()[0], len(store.policies()))
 
 
 class Cors(unittest.TestCase):
