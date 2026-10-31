@@ -26,8 +26,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "That clip is too long. Keep it under 30 seconds." }, { status: 413 });
   }
 
+  // Browsers label recordings like "audio/webm;codecs=opus". Sarvam only accepts the bare type.
+  const audio = new Blob([file], { type: file.type.split(";")[0] || "audio/webm" });
+
   const form = new FormData();
-  form.append("file", file, file instanceof File ? file.name : "speech.webm");
+  form.append("file", audio, file instanceof File ? file.name : "speech.webm");
   form.append("language_code", process.env.SARVAM_STT_LANGUAGE ?? "unknown");
   form.append("keyterms", JSON.stringify(KEYTERMS));
   if (process.env.SARVAM_STT_MODEL) form.append("model", process.env.SARVAM_STT_MODEL);
