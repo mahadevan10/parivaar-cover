@@ -1,4 +1,5 @@
 """Sarvam chat calls that return JSON."""
+import functools
 import json
 import os
 from pathlib import Path
@@ -40,3 +41,19 @@ def ask_json(system, messages):
     except json.JSONDecodeError:
         # Some replies wrap the JSON in prose or a code fence
         return json.loads(text[text.index("{"):text.rindex("}") + 1])
+
+
+@functools.lru_cache(maxsize=512)
+def to_english(text):
+    """English for an Indian-language message, with numbers as digits. English text comes back as it is.
+
+    Used to check the LLM's values against what the user said. On any error the original text is returned.
+    """
+    if text.isascii():
+        return text
+    try:
+        response = client().text.translate(input=text[:1000], source_language_code="auto", target_language_code="en-IN",
+                                           model="mayura:v1", numerals_format="international")
+        return response.translated_text or text
+    except Exception:
+        return text

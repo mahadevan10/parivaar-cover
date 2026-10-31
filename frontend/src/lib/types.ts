@@ -105,9 +105,11 @@ export type Recommendation = {
   id: string;
   /** Premiums are illustrative in the prototype. The UI labels them wherever shown. */
   illustrative: boolean;
-  usual: PlanOption;
+  /** Null when no single floater can take the whole family, e.g. a parent past its entry age. */
+  usual: PlanOption | null;
   mix: PlanOption;
-  saving: number;
+  /** Null when there is no usual pick. */
+  saving: number | null;
   /** Facts comparing the mix with the usual pick, in plain sentences. */
   vsUsual: { code: string; text: string }[];
   /** Most each member can claim in a year, from the solver. */

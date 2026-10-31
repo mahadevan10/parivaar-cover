@@ -4,7 +4,7 @@
 
 import type { ChatRequest, ChatResponse, FamilyProfile, Member } from "../types";
 import { conditionLabel, cover, rupees } from "../format";
-import { DEMO_FAMILY, DEMO_OUTPUT, demoPick } from "./demo";
+import { DEMO_FAMILY, DEMO_OUTPUT, DEMO_USUAL, demoPick } from "./demo";
 import { missingList } from "../family";
 
 type Ask = "members" | "age" | "health" | "city" | "budget" | "office" | "ready" | "explain";
@@ -220,7 +220,7 @@ function question(ask: Ask, family: FamilyProfile): { text: string; quickReplies
 
 function explain(message: string): Pick<ChatResponse, "reply" | "citations"> {
   const o = DEMO_OUTPUT;
-  const usual = o.usual_pick.policy_id;
+  const usual = DEMO_USUAL.policy_id;
   const senior = demoPick("Senior Citizens Red Carpet");
   const floater = demoPick("Young Star Gold");
   const lata = demoPick("Health Infinity");
@@ -229,7 +229,7 @@ function explain(message: string): Pick<ChatResponse, "reply" | "citations"> {
 
   if (/one floater|single|usual|why not/.test(q)) {
     return {
-      reply: `One ${cover(o.usual_pick.sum_insured)} floater puts all five people on one shared limit, and Mohan waits 3 years for diabetes cover. The mix gives the parents their own plans. Mohan's diabetes is covered from year 2, and the family gets ${cover(o.total_cover)} of cover.`,
+      reply: `One ${cover(DEMO_USUAL.sum_insured)} floater puts all five people on one shared limit, and Mohan waits 3 years for diabetes cover. The mix gives the parents their own plans. Mohan's diabetes is covered from year 2, and the family gets ${cover(o.total_cover)} of cover.`,
       citations: [usual, senior.policy_id],
     };
   }
@@ -262,7 +262,7 @@ function explain(message: string): Pick<ChatResponse, "reply" | "citations"> {
   }
   if (/cost|price|premium|cheap|save/.test(q)) {
     return {
-      reply: `The mix costs ${rupees(o.total_premium)} a year, against ${rupees(o.usual_pick.premium)} for the usual pick. These premiums are illustrative.`,
+      reply: `The mix costs ${rupees(o.total_premium)} a year, against ${rupees(DEMO_USUAL.premium)} for the usual pick. These premiums are illustrative.`,
     };
   }
   return {

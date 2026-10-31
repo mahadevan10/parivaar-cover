@@ -15,6 +15,7 @@ from pydantic.alias_generators import to_camel
 
 import llm
 import solver
+import store
 
 app = FastAPI(title="Parivaar Cover")
 # The frontend on this machine, or on a phone or laptop on the same Wi-Fi for the demo
@@ -24,7 +25,6 @@ app.add_middleware(CORSMiddleware,
                    allow_methods=["*"], allow_headers=["*"])
 
 POLICIES = solver.load_policies()
-RECOMMENDATIONS = {}  # id -> /recommend response, kept in memory for follow-up chat
 CLAIM_YEARS = range(1, 5)
 
 CONDITION_NAMES = {
@@ -57,6 +57,28 @@ class Family(BaseModel):
     budget: int = Field(gt=0)
     members: list[Member] = Field(min_length=1)
     office_cover: list[OfficeCover] = []
+
+
+# The family while the user is still talking. Same format with every detail optional, plus what the chat
+# needs. Checked before it is stored, and turned into a Family once nothing is missing.
+
+class DraftMember(BaseModel):
+    id: str
+    name: str
+    age: int | None = Field(None, ge=0, le=120)
+    relation: str | None = None
+    conditions: list[str] = []
+    heard_from: str | None = None
+
+
+class FamilyDraft(BaseModel):
+    id: str = "web"
+    city: str | None = None
+    budget: int | None = Field(None, gt=0)
+    members: list[DraftMember] = []
+    office_cover: list[OfficeCover] = []
+    health_checked: bool = False
+    office_checked: bool = False
 
 
 class Claim(BaseModel):
@@ -109,10 +131,9 @@ def recommend(req: RecommendRequest):
         claims = [c.model_dump() for c in req.claims] if req.claims is not None else default_claims(family)
         claim_checks = [claim_by_year(family, solution, c) for c in claims]
     rec = {"id": solution["id"], "solution": solution, "claim_checks": claim_checks}
-    RECOMMENDATIONS[rec["id"]] = rec
-    if solution["status"] == "ok":
-        # The frontend builds its own id this way (toRecommendation in frontend/src/lib/solver.ts)
-        RECOMMENDATIONS[f"{solution['family_id']}-{solution['total_premium']}"] = rec
+    # The frontend builds its own id this way (toRecommendation in frontend/src/lib/solver.ts)
+    alias = f"{solution['family_id']}-{solution['total_premium']}" if solution["status"] == "ok" else None
+    store.save_recommendation(rec, req.family, alias)
     return rec
 
 
@@ -202,7 +223,7 @@ Return only a JSON object:
 def chat(req: ChatRequest):
     history = [{"role": t.role, "content": t.text} for t in req.history] + [{"role": "user", "content": req.message}]
     if req.recommendation_id:
-        rec = RECOMMENDATIONS.get(req.recommendation_id)
+        rec = store.recommendation(req.recommendation_id)
         if rec is None:
             raise HTTPException(404, "Recommendation not found. Run /recommend again.")
         out = call_llm(EXPLAIN_PROMPT.format(facts=json.dumps(explain_facts(rec), ensure_ascii=False)), history)
@@ -210,7 +231,9 @@ def chat(req: ChatRequest):
         known = {p["policy_id"] for p in solution.get("picks", [])}
         if solution.get("usual_pick"):
             known.add(solution["usual_pick"]["policy_id"])
-        return {"reply": tidy(out.get("reply", "")), "family": req.family, "missing": [], "quickReplies": [],
+        reply = tidy(out.get("reply", ""))
+        remember(req.session_id, req.message, reply)
+        return {"reply": reply, "family": req.family, "missing": [], "quickReplies": [],
                 "readyToOptimise": True, "citations": list(dict.fromkeys(c for c in out.get("citations", []) if c in known))}
 
     before = from_profile(req.family)
@@ -220,7 +243,9 @@ def chat(req: ChatRequest):
     new = dict(out.get("family") or {})
     # ids come from names, so the LLM cannot rename a member
     new["members"] = [{k: v for k, v in m.items() if k != "id"} for m in new.get("members") or []]
-    family = grounded(clean_family(new, family), family, history)
+    # The check runs on English, so values said in Malayalam or Hindi are not thrown away
+    english = [dict(t, content=llm.to_english(t["content"])) if t["role"] == "user" else t for t in history]
+    family = grounded(clean_family(new, family), family, english)
     missing = missing_details(family)
     reply = tidy(out.get("reply", ""))
     for proper in [m["name"] for m in family["members"]] + [family["city"] or ""]:
@@ -232,8 +257,19 @@ def chat(req: ChatRequest):
         old = next((o for o in before.get("members", []) if o.get("id") == m["id"]), None)
         if old is None or any(old.get(k) != m[k] for k in ("age", "relation", "conditions")):
             m["heard_from"] = req.message
+    if req.session_id:
+        family["id"] = req.session_id
+        store.save_family(req.session_id, FamilyDraft.model_validate(family), missing)
+    remember(req.session_id, req.message, reply, english[-1]["content"])
     return {"reply": reply, "family": to_profile(family), "missing": missing,
             "quickReplies": quick_replies(family, missing), "readyToOptimise": not missing}
+
+
+def remember(session_id, message, reply, english=None):
+    """Stores both sides of a chat turn. Turns without a session id are not stored."""
+    if session_id:
+        store.add_message(session_id, "user", message, english)
+        store.add_message(session_id, "assistant", reply)
 
 
 def from_profile(p):
@@ -354,7 +390,8 @@ def clean_family(raw, previous):
             if condition_name(c) and condition_name(c) not in conditions:
                 conditions.append(condition_name(c))
         old = next((o for o in previous.get("members", []) if o.get("id") == mid), {})
-        members.append({"id": mid, "name": name, "age": as_int(m.get("age")),
+        age = as_int(m.get("age"))
+        members.append({"id": mid, "name": name, "age": age if age is not None and 0 <= age <= 120 else None,
                         "relation": m.get("relation"), "conditions": conditions,
                         "heard_from": m.get("heard_from") or old.get("heard_from")})
     office = []
@@ -366,7 +403,7 @@ def clean_family(raw, previous):
         "id": raw.get("id") or previous.get("id") or "web",
         # The LLM sometimes leaves out fields it was not asked about, so keep what we had
         "city": raw.get("city") or previous.get("city") or None,
-        "budget": as_int(raw.get("budget")) or as_int(previous.get("budget")),
+        "budget": next((b for b in (as_int(raw.get("budget")), as_int(previous.get("budget"))) if b and b > 0), None),
         "members": members,
         "office_cover": office,
         "health_checked": bool(raw.get("health_checked") or previous.get("health_checked")),
@@ -379,8 +416,22 @@ RELATION_WORDS = {
     "spouse": ["wife", "husband", "spouse"],
     "father": ["father", "dad", "papa", "appa"],
     "mother": ["mother", "mom", "mum", "mummy", "amma", "maa"],
-    "son": ["son"], "daughter": ["daughter"],
+    "son": ["son", "children", "child", "kids"], "daughter": ["daughter", "children", "child", "kids"],
 }
+# Translated messages often spell numbers out: "my wife is twenty-three"
+UNITS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
+         "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
+TENS = ["twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+NUMBER_WORDS = re.compile(rf"\b(?:({'|'.join(TENS)})(?:[\s-]+({'|'.join(UNITS[1:10])}))?|({'|'.join(UNITS)}))\b")
+
+
+def with_digits(text):
+    """Writes number words as digits, so "sixty-four" can be matched against an age of 64."""
+    def number(m):
+        if m.group(3):
+            return str(UNITS.index(m.group(3)))
+        return str(20 + 10 * TENS.index(m.group(1)) + (UNITS.index(m.group(2)) if m.group(2) else 0))
+    return NUMBER_WORDS.sub(number, text)
 
 
 OFFICE_WORDS = ["office", "company", "employer", "corporate", "work", "job", "group"]
@@ -400,7 +451,7 @@ def passages(history, members):
     """Pieces of what the user said. A sentence naming nobody is read with the question it answers."""
     out, asked = [], ""
     for turn in history:
-        text = turn["content"].lower()
+        text = with_digits(turn["content"].lower())
         if turn["role"] != "user":
             asked = text
         elif any(mentions(text, m) for m in members):

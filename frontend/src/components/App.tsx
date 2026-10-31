@@ -85,12 +85,16 @@ export function App() {
       ]);
       setRec(result);
       setStage("explain");
+      const usualLine = result.usual
+        ? `The usual pick is one floater at ${rupees(result.usual.premium)} for ${cover(result.usual.totalCover)}.`
+        : "No single floater can take your whole family.";
       push({
         role: "assistant",
-        text: `Here is your mix. ${result.mix.policies.length} policies for ${rupees(result.mix.premium)} a year with ${cover(result.mix.totalCover)} of total cover. The usual pick is one floater at ${rupees(result.usual.premium)} for ${cover(result.usual.totalCover)}. Premiums are illustrative. Ask me about any pick, or try the claim check.`,
+        text: `Here is your mix. ${result.mix.policies.length} policies for ${rupees(result.mix.premium)} a year with ${cover(result.mix.totalCover)} of total cover. ${usualLine} Premiums are illustrative. Ask me about any pick, or try the claim check.`,
       });
       setQuickReplies(["Why not one floater?", "What is a super top-up?", "What are the catches?"]);
     } catch (e) {
+      console.error("Find my mix failed", e);
       setStage("talk");
       push({
         role: "assistant",
@@ -170,7 +174,7 @@ export function App() {
   };
 
   const policies: Record<string, Policy> = Object.fromEntries(
-    [...(rec?.mix.policies ?? []), ...(rec?.usual.policies ?? [])].map((p) => [p.id, p]),
+    [...(rec?.mix.policies ?? []), ...(rec?.usual?.policies ?? [])].map((p) => [p.id, p]),
   );
   const policyNames = Object.fromEntries(Object.values(policies).map((p) => [p.id, p.product]));
   const canvas =
