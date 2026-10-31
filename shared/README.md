@@ -45,9 +45,27 @@ Conditions use lowercase names: `diabetes`, `hypertension`, `asthma`, `heart_dis
 
 `cover_target` is optional. It is the total cover the family wants, in rupees, summed over every policy in the mix the same way as `total_cover` (office cover is not counted). The mix must reach it, but the budget comes first: when the budget cannot buy that much cover, the solver returns the mix with the most cover the budget allows and says so in `cover_check`. Leave it out, or `null`, to let the solver choose.
 
+`requirements` is optional. It holds the rules the user set for the plans, and the solver keeps every one. Unlike `cover_target`, a rule is never relaxed to fit the budget.
+
+| Field | Meaning |
+|---|---|
+| `min_cover` | `{member id: rupees}`, the least cover for that person, office cover included |
+| `max_wait_months` | `{member id: months}`, every plan for that person covers their known conditions within this wait |
+| `max_copay_percent` | The most co-pay a plan may have. `0` means no co-pay |
+| `uncapped_room_rent` | `true` leaves out plans that cap room rent |
+| `avoid_insurers` | Insurer names to leave out |
+| `one_insurer` | `true` takes every plan from one insurer |
+| `avoid_policies` | Policy ids to leave out |
+| `avoid_plan_types` | Plan types to leave out: `floater`, `individual`, `senior`, `super_topup` |
+| `max_policies` | The most policies in the mix |
+
 ## Solver output
 
-See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`), `picks` (policy, members, premium, catches, source, reasons), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `vs_usual`, `mix_catches`, `cover_target`, `cover_check`.
+See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`), `picks` (policy, members, premium, catches, source, reasons), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `vs_usual`, `mix_catches`, `cover_target`, `cover_check`, `requirements`, `requirement_notes`.
+
+`requirement_notes` has one entry per rule, saying how the mix keeps it, with a `code` and a plain `text`.
+
+With `status: "no_fit"`, `reason` is `budget` when a higher budget would work and `budget_needed` is the lowest yearly premium that follows every rule. `reason` is `rules` when no mix of the listed plans meets the rules at any price, and `budget_needed` is `null`.
 
 ### Reasons
 

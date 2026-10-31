@@ -5,6 +5,7 @@ import type { FamilyProfile, Member } from "@/lib/types";
 import { conditionLabel, cover, rupees } from "@/lib/format";
 import { VERIFIED } from "@/lib/family";
 import { Avatar } from "./Avatar";
+import { RuleChips } from "./RuleChips";
 import { AlertIcon, CheckIcon, PlusIcon, ShieldIcon, XIcon } from "./icons";
 
 let added = 0;
@@ -86,6 +87,12 @@ export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange
           flash={changedIds.has("office")}
         />
       </div>
+
+      <RuleChips
+        requirements={family.requirements}
+        nameOf={(id) => family.members.find((m) => m.id === id)?.name ?? id}
+        onRemove={(requirements) => onChange({ ...family, requirements })}
+      />
 
       <div className="sticky bottom-0 -mx-4 border-t border-line bg-canvas/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
         <button

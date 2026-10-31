@@ -57,3 +57,16 @@ def to_english(text):
         return response.translated_text or text
     except Exception:
         return text
+
+
+@functools.lru_cache(maxsize=512)
+def from_english(text, language):
+    """The text in an Indian language, like hi-IN, with numbers as digits. On any error the English comes back."""
+    if len(text) > 1000:
+        return text
+    try:
+        response = client().text.translate(input=text, source_language_code="en-IN", target_language_code=language,
+                                           model="mayura:v1", numerals_format="international")
+        return response.translated_text or text
+    except Exception:
+        return text

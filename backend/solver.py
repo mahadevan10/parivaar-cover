@@ -108,19 +108,49 @@ def target_lakhs(member):
     return TARGET_LAKHS_60_PLUS if member["age"] >= 60 else TARGET_LAKHS_UNDER_60
 
 
+def rules(family):
+    """What the user asked of the plans beyond the budget and total cover. See shared/README.md."""
+    return family.get("requirements") or {}
+
+
+def allowed(family, c):
+    """False when a requirement rules this candidate out."""
+    req, policy = rules(family), c["policy"]
+    by_id = {m["id"]: m for m in family["members"]}
+    if policy["id"] in (req.get("avoid_policies") or []):
+        return False
+    if policy["insurer"].lower() in {i.lower() for i in req.get("avoid_insurers") or []}:
+        return False
+    if policy["plan_type"] in (req.get("avoid_plan_types") or []):
+        return False
+    if req.get("max_copay_percent") is not None and policy["copay_percent"] > req["max_copay_percent"]:
+        return False
+    if req.get("uncapped_room_rent") and policy["room_rent"]["capped"]:
+        return False
+    for mid, months in (req.get("max_wait_months") or {}).items():
+        if mid in c["members"] and condition_wait(policy, by_id[mid]["conditions"]) > months:
+            return False
+    return True
+
+
 def lakhs_up(amount):
     """Rupees as whole lakhs, rounded up, so a floor of ₹1,50,001 asks for 2 lakh."""
     return -(-amount // LAKH)
 
 
-def build_model(family, cands, *, budget=True, floor=None, forbid=None):
+def build_model(family, cands, *, budget=True, floor=None, forbid=None, member_floors=None):
     """The rules every mix must follow, plus the value of each member's cover.
 
     budget=False drops the budget limit. floor is the least total cover the picks must add up to,
     in rupees. forbid rules out one candidate, which shows what the solver would pick without it.
+    member_floors is the least cover per member in rupees, on top of the min_cover requirement.
     Returns the model, one choice per candidate, the total cover in lakhs and the value terms.
     """
     office = office_cover(family)
+    req = rules(family)
+    least = dict(member_floors or {})
+    for mid, amount in (req.get("min_cover") or {}).items():
+        least[mid] = max(least.get(mid, 0), amount)
     model = cp_model.CpModel()
     x = [model.NewBoolVar(f"c{i}") for i in range(len(cands))]
 
@@ -139,7 +169,10 @@ def build_model(family, cands, *, budget=True, floor=None, forbid=None):
         model.Add(sum(x[i] for i in topups) <= 1)
 
         cover = office[mid] // LAKH + sum(cands[i]["policy"]["sum_insured"] // LAKH * x[i] for i in bases + topups)
-        counted = model.NewIntVar(0, target_lakhs(m), f"counted_{mid}")
+        if least.get(mid):
+            model.Add(cover >= lakhs_up(least[mid]))
+        # Cover the user asked for counts in full, even above the usual target
+        counted = model.NewIntVar(0, max(target_lakhs(m), lakhs_up(least.get(mid, 0))), f"counted_{mid}")
         model.Add(counted <= cover)
         objective.append(VALUE_PER_LAKH * counted)
 
@@ -163,6 +196,15 @@ def build_model(family, cands, *, budget=True, floor=None, forbid=None):
         model.Add(total_cover >= lakhs_up(floor))
     if forbid is not None:
         model.Add(x[forbid] == 0)
+    if req.get("max_policies"):
+        model.Add(sum(x) <= req["max_policies"])
+    if req.get("one_insurer"):
+        chosen = {}
+        for i, c in enumerate(cands):
+            insurer = c["policy"]["insurer"]
+            chosen.setdefault(insurer, model.NewBoolVar(f"insurer_{len(chosen)}"))
+            model.Add(x[i] <= chosen[insurer])
+        model.Add(sum(chosen.values()) <= 1)
     return model, x, total_cover, objective
 
 
@@ -196,17 +238,27 @@ def max_cover(family, cands, target):
     return sum(cands[i]["policy"]["sum_insured"] for i in chosen)
 
 
-def cheapest_for(family, cands, target):
+def cheapest_for(family, cands, target, member_floors=None):
     """The lowest yearly premium for a mix with at least the target cover, ignoring the budget."""
-    model, x, _, _ = build_model(family, cands, budget=False, floor=target)
+    model, x, _, _ = build_model(family, cands, budget=False, floor=target, member_floors=member_floors)
     model.Minimize(sum(c["premium"] * x[i] for i, c in enumerate(cands)))
     chosen = run(model, x)
     return None if chosen is None else sum(cands[i]["premium"] for i in chosen)
 
 
+def allowed_candidates(family, policies):
+    return [c for c in candidates(family, policies) if allowed(family, c)]
+
+
+def budget_needed(family, member_floors=None, policies=None):
+    """The lowest yearly premium for a mix that follows every rule and gives each member at least
+    their floor, ignoring the budget. None when no mix of the listed plans can."""
+    return cheapest_for(family, allowed_candidates(family, policies or load_policies()), None, member_floors)
+
+
 def solve(family, policies=None):
     policies = policies or load_policies()
-    cands = candidates(family, policies)
+    cands = allowed_candidates(family, policies)
     target = family.get("cover_target")
 
     # The budget comes first. When it cannot buy the cover asked for, the mix gets as close as it can.
@@ -221,8 +273,12 @@ def solve(family, policies=None):
     else:
         chosen = optimise(family, cands)
     if chosen is None:
+        # The cover target is never the reason: the budget comes first, so it was already let go
+        needed = cheapest_for(family, cands, None)
         return {"status": "no_fit", "family_id": family["id"], "budget": family["budget"],
-                "cover_target": target, "message": "No mix covers everyone within this budget."}
+                "cover_target": target, "budget_needed": needed, "reason": "budget" if needed else "rules",
+                "message": "No mix covers everyone within this budget." if needed
+                           else "No mix of the plans we have meets all of your rules."}
 
     picks = [dict(pick_out(cands[i]), reasons=reasons_for(family, cands, chosen, i, floor)) for i in chosen]
     picks.sort(key=lambda p: (p["plan_type"] == "super_topup", -len(p["members"])))
@@ -243,7 +299,54 @@ def solve(family, policies=None):
         "vs_usual": vs_usual(family, picks, usual),
         "mix_catches": mix_catches(family, picks),
         "cover_check": cover_check(family, cands, target, total_cover) if target else None,
+        "requirements": rules(family),
+        "requirement_notes": requirement_notes(family, picks),
     }
+
+
+def requirement_notes(family, picks):
+    """One sentence per rule the user set, saying how the mix keeps it. Same shape as the reasons."""
+    req, out = rules(family), []
+    by_id = {m["id"]: m for m in family["members"]}
+    cover = member_cover(family, picks)
+    for mid, amount in (req.get("min_cover") or {}).items():
+        if mid in by_id:
+            out.append({"code": "min_cover", "member": mid, "asked": amount, "cover": cover[mid],
+                        "text": f"You asked for at least {lakhs(amount)} for {by_id[mid]['name']}. "
+                                f"{by_id[mid]['name']} gets {lakhs(cover[mid])}."})
+    for mid, months in (req.get("max_wait_months") or {}).items():
+        if mid in by_id and by_id[mid]["conditions"]:
+            out.append({"code": "max_wait", "member": mid, "months": months,
+                        "text": f"Every plan for {by_id[mid]['name']} covers {by_id[mid]['name']}'s "
+                                f"{names(c.replace('_', ' ') for c in by_id[mid]['conditions'])} within {duration(months)}."})
+    if req.get("max_copay_percent") is not None:
+        cap = req["max_copay_percent"]
+        out.append({"code": "max_copay", "percent": cap,
+                    "text": "No plan in this mix has a co-pay." if cap == 0 else f"No plan in this mix has a co-pay above {cap}%."})
+    if req.get("uncapped_room_rent"):
+        out.append({"code": "uncapped_room_rent", "text": "No plan in this mix caps room rent."})
+    if req.get("avoid_insurers"):
+        out.append({"code": "avoid_insurers", "insurers": req["avoid_insurers"],
+                    "text": f"This mix leaves out {names(req['avoid_insurers'])}, as you asked."})
+    if req.get("avoid_plan_types"):
+        out.append({"code": "avoid_plan_types", "plan_types": req["avoid_plan_types"],
+                    "text": f"This mix has no {names(PLAN_TYPE_NAMES[t] for t in req['avoid_plan_types'])}, as you asked."})
+    if req.get("avoid_policies"):
+        out.append({"code": "avoid_policies", "policy_ids": req["avoid_policies"],
+                    "text": f"This mix leaves out {len(req['avoid_policies'])} "
+                            f"{'plan' if len(req['avoid_policies']) == 1 else 'plans'} you asked to drop."})
+    if req.get("one_insurer") and picks:
+        out.append({"code": "one_insurer", "insurer": picks[0]["insurer"],
+                    "text": f"Every plan in this mix is from {picks[0]['insurer']}."})
+    if req.get("max_policies"):
+        out.append({"code": "max_policies", "most": req["max_policies"],
+                    "text": f"This mix has {len(picks)} {'policy' if len(picks) == 1 else 'policies'}, "
+                            f"within the {req['max_policies']} you asked for."})
+    return out
+
+
+PLAN_TYPE_NAMES = {"floater": "family floater", "individual": "individual plan", "senior": "senior plan",
+                   "super_topup": "super top-up"}
 
 
 def cover_check(family, cands, target, total_cover):

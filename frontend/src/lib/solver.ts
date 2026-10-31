@@ -1,7 +1,7 @@
 // The backend's formats (see shared/README.md) and the mapping to the UI's types.
 // This is the only file that knows the solver's snake_case shapes.
 
-import type { ClaimOutcome, ClaimScenario, CoverCheck, FamilyProfile, PlanOption, Policy, Recommendation } from "./types";
+import type { ClaimOutcome, ClaimScenario, CoverCheck, FamilyProfile, PlanOption, Policy, Recommendation, Requirements } from "./types";
 
 export type SolverFamily = {
   id: string;
@@ -10,6 +10,19 @@ export type SolverFamily = {
   cover_target?: number | null;
   members: { id: string; name: string; age?: number; relation?: string; conditions: string[] }[];
   office_cover: { members: string[]; sum_insured: number }[];
+  requirements?: SolverRequirements;
+};
+
+export type SolverRequirements = {
+  min_cover?: Record<string, number>;
+  max_wait_months?: Record<string, number>;
+  max_copay_percent?: number | null;
+  uncapped_room_rent?: boolean;
+  avoid_insurers?: string[];
+  one_insurer?: boolean;
+  avoid_policies?: string[];
+  avoid_plan_types?: Policy["kind"][];
+  max_policies?: number | null;
 };
 
 export type SolverPick = {
@@ -44,6 +57,8 @@ export type SolverOutput = {
   /** Set by the API; the /chat endpoint looks results up by it. */
   id?: string;
   status: "ok" | "no_fit";
+  /** On no_fit: "budget" when a higher budget would do, "rules" when no mix meets the rules at any price. */
+  reason?: "budget" | "rules";
   family_id: string;
   budget: number;
   picks: SolverPick[];
@@ -144,6 +159,21 @@ export function toSolverFamily(family: FamilyProfile, id: string): SolverFamily 
     office_cover: family.officeCover
       ? [{ members: family.officeCover.memberIds, sum_insured: family.officeCover.amount }]
       : [],
+    requirements: toSolverRequirements(family.requirements),
+  };
+}
+
+function toSolverRequirements(r: Requirements = {}): SolverRequirements {
+  return {
+    min_cover: r.minCover,
+    max_wait_months: r.maxWaitMonths,
+    max_copay_percent: r.maxCopayPercent,
+    uncapped_room_rent: r.uncappedRoomRent,
+    avoid_insurers: r.avoidInsurers,
+    one_insurer: r.oneInsurer,
+    avoid_policies: r.avoidPolicies,
+    avoid_plan_types: r.avoidPlanTypes,
+    max_policies: r.maxPolicies,
   };
 }
 

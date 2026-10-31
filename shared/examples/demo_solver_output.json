@@ -471,6 +471,8 @@
     "total_cover": 10500000,
     "text": "You asked for ₹1 crore of cover. This mix gives ₹1.05 crore."
   },
+  "requirements": {},
+  "requirement_notes": [],
   "claim_check": {
     "mix": {
       "member_id": "mohan",

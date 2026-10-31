@@ -210,6 +210,184 @@ class Explain(unittest.TestCase):
         self.assertEqual(client.post("/chat", json={"message": "hi", "recommendationId": "rec-x"}).status_code, 404)
 
 
+def profile(family=DEMO, **extra):
+    """The demo family the way the UI sends it."""
+    return dict(app.to_profile(app.clean_family(dict(family, health_checked=True, office_checked=True,
+                                                     cover_checked=True), {})), **extra)
+
+
+class Changes(unittest.TestCase):
+    """Change requests after the mix is shown. The first Sarvam call is the explainer, the second the editor."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.rec = client.post("/recommend", json={"family": dict(DEMO, id="s-edit")}).json()
+
+    def change(self, message, edit, family=None, history=None, **extra):
+        replies = [{"reply": "", "citations": [], "change": True}, edit]
+        with mock.patch.object(app.llm, "ask_json", side_effect=replies):
+            return client.post("/chat", json=dict({"sessionId": "s-edit", "message": message,
+                                                   "family": family or profile(),
+                                                   "history": history or [], "recommendationId": self.rec["id"]},
+                                                  **extra)).json()
+
+    def edited(self, **changes):
+        family = copy.deepcopy(DEMO)
+        for m in family["members"]:
+            m.update(changes.pop(m["id"], {}))
+        return dict(family, **changes)
+
+    def test_a_question_is_answered_as_before(self):
+        with mock.patch.object(app.llm, "ask_json", return_value={"reply": "Because it is cheaper.", "citations": []}):
+            body = client.post("/chat", json={"message": "Why not one floater?", "recommendationId": self.rec["id"]}).json()
+        self.assertEqual(body["reply"], "Because it is cheaper.")
+        self.assertNotIn("proposal", body)
+
+    def test_an_age_change_is_quoted_from_the_solver(self):
+        body = self.change("My father Mohan is 66 now", {"family": self.edited(mohan={"age": 66})})
+        expected = solver.solve(app.Family.model_validate(self.edited(mohan={"age": 66})).model_dump(), app.POLICIES)
+        proposal = body["proposal"]
+        self.assertTrue(proposal["ready"])
+        self.assertEqual(proposal["premium"], expected["total_premium"])
+        self.assertEqual(proposal["premiumChange"], expected["total_premium"] - 107000)
+        self.assertEqual(next(m for m in proposal["family"]["members"] if m["id"] == "mohan")["age"], 66)
+        self.assertTrue(body["reply"].startswith("Mohan's age is now 66."))
+        self.assertNotIn("illustrative", body["reply"])
+        self.assertEqual(body["quickReplies"], ["Update my mix", "Keep this mix"])
+        # The board keeps the family the mix ran on until the user updates
+        self.assertEqual(body["family"]["members"][3]["age"], 64)
+
+    def test_more_cover_over_budget_raises_the_budget(self):
+        body = self.change("I need at least 1.5 crore for pitaji",
+                           {"family": self.edited(), "requirements": {"min_cover": {"mohan": 15000000}}})
+        proposal = body["proposal"]
+        self.assertEqual(proposal["family"]["requirements"]["minCover"], {"mohan": 15000000})
+        self.assertGreater(proposal["family"]["budget"], 110000)
+        self.assertIn("Mohan needs at least ₹1.5 crore of cover.", body["reply"])
+        self.assertIn(f"Updating sets your budget to {solver.inr(proposal['family']['budget'])}.", body["reply"])
+        self.assertIn("Mohan's cover goes from ₹35 lakh to ₹1.5 crore.", body["reply"])
+
+    def test_more_cover_without_an_amount_asks_for_one(self):
+        body = self.change("I need more cover for my father",
+                           {"family": self.edited(), "requirements": {"min_cover": {"mohan": 7000000}}})
+        self.assertIn("How much cover would you like for Mohan? Mohan has ₹35 lakh now.", body["reply"])
+        self.assertEqual(body["quickReplies"], ["₹50 lakh", "₹1 crore"])
+        self.assertFalse(body["proposal"]["ready"])
+
+    def test_the_amount_given_next_is_quoted(self):
+        first = self.change("I need more coverage for my father", {"family": self.edited(), "more_cover_for": ["mohan"]})
+        # The LLM may still list Mohan, but the amount is now known, so the change is priced
+        body = self.change("₹50 lakh", {"family": self.edited(), "requirements": {"min_cover": {"mohan": 5000000}},
+                                       "more_cover_for": ["mohan"]},
+                           family=first["proposal"]["family"],
+                           history=[{"role": "assistant", "text": first["reply"]}])
+        self.assertTrue(body["proposal"]["ready"])
+        self.assertGreaterEqual(body["proposal"]["family"]["requirements"]["minCover"]["mohan"], 5000000)
+        self.assertTrue(body["reply"].startswith("Mohan needs at least ₹50 lakh of cover. Your mix becomes"))
+
+    def test_a_rule_for_someone_the_user_never_named_is_dropped(self):
+        body = self.change("No co-pay please", {"family": self.edited(),
+                                                "requirements": {"max_copay_percent": 0, "min_cover": {"lata": 5000000}}})
+        self.assertEqual(body["proposal"]["family"]["requirements"]["minCover"], {})
+        self.assertEqual(body["proposal"]["family"]["requirements"]["maxCopayPercent"], 0)
+        self.assertTrue(body["reply"].startswith("No plans with a co-pay."))
+
+    def test_a_change_the_editor_cannot_express_goes_to_an_expert(self):
+        body = self.change("Add dental cover for everyone", {"family": self.edited()})
+        self.assertTrue(body["expertRequested"])
+        self.assertEqual(store.expert_requests("s-edit")[-1]["reason"], "no field for this request")
+
+    def test_nothing_heard_changes_nothing(self):
+        body = self.change("Hmm okay", {"family": self.edited(budget=50000), "requirements": {"one_insurer": True}})
+        self.assertIsNone(body["proposal"])
+        self.assertIn("I could not tell what to change.", body["reply"])
+
+    def test_something_no_rule_can_express_goes_to_an_expert(self):
+        body = self.change("I need maternity cover for Sneha",
+                           {"family": self.edited(), "unsupported": "maternity cover", "more_cover_for": ["sneha"]})
+        self.assertTrue(body["expertRequested"])
+        self.assertIsNone(body["proposal"])
+        self.assertIn("An expert will contact you directly and suggest a floater", body["reply"])
+        self.assertEqual(store.expert_requests("s-edit")[-1]["reason"], "maternity cover")
+
+    def test_rules_no_mix_can_meet_go_to_an_expert(self):
+        body = self.change("Mohan needs 5 crore of cover",
+                           {"family": self.edited(), "requirements": {"min_cover": {"mohan": 50000000}}})
+        self.assertTrue(body["expertRequested"])
+        self.assertEqual(store.expert_requests("s-edit")[-1]["reason"], "no_plan_meets_rules")
+
+    def test_a_cover_target_the_budget_cannot_reach_offers_a_higher_budget(self):
+        body = self.change("We want 3 crore of cover in total", {"family": self.edited(cover_target=30000000, budget=110000)},
+                           family=profile(dict(DEMO, budget=60000)))
+        label = next(q for q in body["quickReplies"] if q.startswith("Raise budget to"))
+        self.assertEqual(label, f"Raise budget to {solver.inr(body['proposal']['raiseBudgetTo'])}")
+        self.assertIn("You asked for ₹3 crore of cover.", body["reply"])
+
+    def test_a_new_person_without_an_age_is_asked_about(self):
+        family = self.edited()
+        family["members"].append({"name": "Riya", "relation": "sister", "conditions": []})
+        body = self.change("Add my sister Riya", {"family": family})
+        self.assertIn("Riya is added. How old is Riya?", body["reply"])
+        self.assertFalse(body["proposal"]["ready"])
+        # The next turn sends the draft back, and the quote covers both changes
+        family["members"][-1]["age"] = 28
+        draft = body["proposal"]["family"]
+        body = self.change("She is 28", {"family": family}, family=draft,
+                           history=[{"role": "assistant", "text": "How old is Riya?"}])
+        self.assertTrue(body["proposal"]["ready"])
+        self.assertIn("Riya, 28, is added.", body["reply"])
+        self.assertIn("Riya gets", body["reply"])
+
+    def test_the_quote_keeps_the_numbers_in_another_language(self):
+        def translate(text, language):
+            return text.replace("₹", "रु ") if "drop" not in language else text.replace("66", "")
+        with mock.patch.object(app.llm, "from_english", side_effect=translate):
+            hindi = self.change("मेरे पिता मोहन अब 66 के हैं", {"family": self.edited(mohan={"age": 66})}, language="hi-IN")
+            broken = self.change("Mohan is 66 now", {"family": self.edited(mohan={"age": 66})}, language="hi-IN-drop")
+        self.assertIn("रु ", hindi["reply"])
+        self.assertTrue(broken["reply"].startswith("Mohan's age is now 66."))
+
+    def test_removing_a_rule_on_the_results_screen_is_quoted(self):
+        family = dict(DEMO, id="s-quote", requirements={"max_copay_percent": 0})
+        rec = client.post("/recommend", json={"family": family}).json()
+        body = client.post("/quote", json={"sessionId": "s-quote", "family": profile(DEMO),
+                                            "recommendationId": rec["id"]}).json()
+        self.assertTrue(body["reply"].startswith("Plans with a co-pay are allowed again."))
+        self.assertEqual(body["proposal"]["premium"], 107000)
+
+
+class Rules(unittest.TestCase):
+    def test_intake_keeps_a_rule_the_user_said(self):
+        reply = {"reply": "Noted.", "family": {"members": [{"name": "Mohan", "age": 64, "relation": "father"}]},
+                 "requirements": {"min_cover": {"Mohan": "25,00,000"}}}
+        with mock.patch.object(app.llm, "ask_json", return_value=reply):
+            body = client.post("/chat", json={"message": "My father Mohan is 64. He needs 25 lakh of cover",
+                                              "family": {}}).json()
+        self.assertEqual(body["family"]["requirements"]["minCover"], {"mohan": 2500000})
+
+    def test_intake_keeps_rules_the_llm_leaves_out(self):
+        family = profile(DEMO)
+        family["requirements"]["maxCopayPercent"] = 0
+        with mock.patch.object(app.llm, "ask_json", return_value={"reply": "Noted.", "family": app.from_profile(family)}):
+            body = client.post("/chat", json={"message": "Thanks", "family": family}).json()
+        self.assertEqual(body["family"]["requirements"]["maxCopayPercent"], 0)
+
+    def test_unsupported_in_intake_asks_an_expert(self):
+        reply = {"reply": "Noted.", "family": {}, "unsupported": "OPD cover"}
+        with mock.patch.object(app.llm, "ask_json", return_value=reply):
+            body = client.post("/chat", json={"sessionId": "s-intake", "message": "I want OPD cover", "family": {}}).json()
+        self.assertTrue(body["expertRequested"])
+        self.assertIn("insurance expert", body["reply"])
+
+    def test_recommend_rejects_rules_for_unknown_members(self):
+        family = dict(DEMO, requirements={"min_cover": {"nobody": 100000}})
+        self.assertEqual(client.post("/recommend", json={"family": family}).status_code, 422)
+
+    def test_amounts_and_months(self):
+        self.assertEqual(app.amounts_in("budget is 60k, 1.5 crore and ₹50,00,000"), {60000, 15000000, 5000000})
+        self.assertEqual(app.months_in("within a year or 18 months"), {12, 18})
+
+
 class Summary(unittest.TestCase):
     def setUp(self):
         self.rec_id = client.post("/recommend", json={"family": DEMO}).json()["id"]

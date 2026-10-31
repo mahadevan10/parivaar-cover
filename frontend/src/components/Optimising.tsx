@@ -14,6 +14,8 @@ const SLOW_AFTER_MS = 6000;
 
 type Props = {
   memberCount: number;
+  /** An update to a mix already shown: one short step instead of the full run. */
+  quick?: boolean;
   /** True once the solver has answered. The solver step waits for it. */
   finished: boolean;
   onFinePrintRead: () => void;
@@ -22,11 +24,18 @@ type Props = {
 };
 
 /** Shows the solver's steps while the recommendation loads. */
-export function Optimising({ memberCount, finished, onFinePrintRead, onComplete }: Props) {
+export function Optimising({ memberCount, quick, finished, onFinePrintRead, onComplete }: Props) {
   const [done, setDone] = useState(0);
   const [slow, setSlow] = useState(false);
 
   useEffect(() => {
+    if (!quick || !finished) return;
+    const t = setTimeout(onComplete, 400);
+    return () => clearTimeout(t);
+  }, [quick, finished, onComplete]);
+
+  useEffect(() => {
+    if (quick) return;
     if (done === 1 && !finished) return; // still waiting on the solver
     const delay = [1200, 700, 500, 600][done];
     const t = setTimeout(() => {
@@ -35,13 +44,25 @@ export function Optimising({ memberCount, finished, onFinePrintRead, onComplete 
       setDone(done + 1);
     }, delay);
     return () => clearTimeout(t);
-  }, [done, finished, onFinePrintRead, onComplete]);
+  }, [quick, done, finished, onFinePrintRead, onComplete]);
 
   useEffect(() => {
     if (finished) return;
     const t = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
     return () => clearTimeout(t);
   }, [finished]);
+
+  if (quick) {
+    return (
+      <div className="mx-auto flex w-full max-w-lg flex-col gap-3 p-6 pt-16" aria-live="polite" aria-busy={!finished}>
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-white p-4">
+          {finished ? <CheckIcon className="h-5 w-5 text-sky" /> : <SpinnerIcon className="h-5 w-5 text-navy" />}
+          <span className="font-semibold text-navy">{finished ? "Done. Here is your new mix." : "Updating your mix"}</span>
+        </div>
+        <p className="text-sm text-muted">The solver checks every combination again with your change.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5 p-6 pt-16" aria-live="polite" aria-busy={done < STEPS.length}>
