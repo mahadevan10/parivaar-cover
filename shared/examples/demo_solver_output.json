@@ -24,10 +24,10 @@
         "pre_existing": 36
       },
       "catches": [
-        "Adults can join only up to age 40.",
         "Illnesses you already have are covered only after 3 years.",
         "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
-        "One cover is shared by everyone on the policy."
+        "One cover is shared by everyone on the policy.",
+        "Adults can join only up to age 40."
       ],
       "source": "https://www.starhealth.in/health-insurance/",
       "reasons": [
@@ -85,10 +85,11 @@
         "pre_existing": 12
       },
       "catches": [
-        "Illnesses you already have are covered after 1 year.",
         "You pay 30% of every claim.",
-        "Room rent is capped at 1% of the cover, at most ₹4,000 a day.",
-        "Heart treatment, cataract, stroke, cancer and fractures have sub-limits."
+        "Illnesses you already have are covered after 1 year.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+        "Room rent up to 1% of the cover, at most ₹4,000 a day.",
+        "Heart treatment, cataract, stroke, cancer and fractures have sub-limits. Check the policy wording for the amounts."
       ],
       "source": "https://joinditto.in/health-insurance/compare-plans/comprehensive-vs-red-carpet-senior-citizens/",
       "reasons": [
@@ -205,7 +206,8 @@
       },
       "catches": [
         "Pays only after the year's bills cross ₹10 lakh.",
-        "Illnesses you already have are covered only after 3 years."
+        "Illnesses you already have are covered only after 3 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
       ],
       "source": "https://www.starhealth.in/health-insurance/",
       "reasons": [
@@ -248,7 +250,8 @@
       },
       "catches": [
         "Pays only after the year's bills cross ₹10 lakh.",
-        "Illnesses you already have are covered after 2 years."
+        "Illnesses you already have are covered after 2 years.",
+        "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
       ],
       "source": "https://manipalcigna.com/blog-entry/-/blogs/manipalcigna-health-insurance-launches-value-formoney-super-top-up-plan",
       "reasons": [
@@ -380,6 +383,86 @@
       "mix_months": 12,
       "usual_months": 36,
       "text": "Mohan's diabetes is covered from year 2, against year 4 with the usual pick."
+    }
+  ],
+  "mix_catches": [
+    {
+      "code": "topup_waits_longer",
+      "members": [
+        "mohan"
+      ],
+      "policy_ids": [
+        "star-red-carpet-10l",
+        "cigna-super-top-up-25l-10l"
+      ],
+      "condition": "diabetes",
+      "base_months": 12,
+      "topup_months": 24,
+      "clause": "waiting_periods_months.pre_existing",
+      "text": "Mohan's diabetes is covered by Senior Citizens Red Carpet after 1 year and by the ManipalCigna top-up after 2 years. In year 2, only Senior Citizens Red Carpet pays diabetes claims, up to ₹10 lakh."
+    },
+    {
+      "code": "copay_under_topup",
+      "members": [
+        "mohan"
+      ],
+      "policy_ids": [
+        "star-red-carpet-10l"
+      ],
+      "copay_percent": 30,
+      "most_paid": 300000,
+      "clause": "copay_percent",
+      "text": "Senior Citizens Red Carpet makes Mohan pay 30% of each claim it covers. On a big bill, that share can reach ₹3,00,000. The top-up does not pay it."
+    },
+    {
+      "code": "two_insurers",
+      "members": [
+        "mohan"
+      ],
+      "policy_ids": [
+        "star-red-carpet-10l",
+        "cigna-super-top-up-25l-10l"
+      ],
+      "clause": "insurer",
+      "text": "Mohan's base plan is from Star Health and the top-up from ManipalCigna. A bill above ₹10 lakh means two claims, and ManipalCigna asks for Star Health's settlement papers."
+    },
+    {
+      "code": "two_insurers",
+      "members": [
+        "lata"
+      ],
+      "policy_ids": [
+        "reliance-health-infinity-10l",
+        "cigna-super-top-up-25l-10l"
+      ],
+      "clause": "insurer",
+      "text": "Lata's base plan is from Reliance General and the top-up from ManipalCigna. A bill above ₹10 lakh means two claims, and ManipalCigna asks for Reliance General's settlement papers."
+    },
+    {
+      "code": "shared_cover",
+      "members": [
+        "rahul",
+        "sneha",
+        "aarav"
+      ],
+      "policy_ids": [
+        "star-young-star-gold-10l-floater",
+        "star-super-surplus-gold-50l-10l"
+      ],
+      "clause": "sum_insured",
+      "text": "Rahul, Sneha and Aarav share the ₹10 lakh floater and the ₹50 lakh top-up. A big claim for one of them leaves less for the others that year."
+    },
+    {
+      "code": "shared_cover",
+      "members": [
+        "mohan",
+        "lata"
+      ],
+      "policy_ids": [
+        "cigna-super-top-up-25l-10l"
+      ],
+      "clause": "sum_insured",
+      "text": "Mohan and Lata share the ₹25 lakh top-up. A big claim for one of them leaves less for the other that year."
     }
   ],
   "claim_check": {

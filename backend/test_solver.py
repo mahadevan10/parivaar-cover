@@ -52,6 +52,29 @@ class DemoFamily(unittest.TestCase):
         wait = next(r for r in self.result["vs_usual"] if r["code"] == "condition_wait")
         self.assertEqual((wait["mix_months"], wait["usual_months"]), (12, 36))
 
+    def test_mix_catches(self):
+        found = {(c["code"], tuple(c["members"])) for c in self.result["mix_catches"]}
+        self.assertEqual(found, {
+            ("topup_waits_longer", ("mohan",)),
+            ("copay_under_topup", ("mohan",)),
+            ("two_insurers", ("mohan",)),
+            ("two_insurers", ("lata",)),
+            ("shared_cover", ("rahul", "sneha", "aarav")),
+            ("shared_cover", ("mohan", "lata")),
+        })
+        self.assertEqual(self.result["mix_catches"][0]["code"], "topup_waits_longer")
+        wait = self.result["mix_catches"][0]
+        self.assertEqual((wait["base_months"], wait["topup_months"]), (12, 24))
+        self.assertIn("In year 2, only Senior Citizens Red Carpet pays", wait["text"])
+
+    def test_topup_wait_matches_the_claim_check(self):
+        # A diabetes claim above the deductible in year 2: only Red Carpet pays, after its 30% co-pay
+        check = solver.claim_check(self.family, self.result["picks"], "mohan", 1500000, 2, "diabetes")
+        self.assertEqual(check["payable"], 700000)
+        copay = next(c for c in self.result["mix_catches"] if c["code"] == "copay_under_topup")
+        self.assertEqual(copay["most_paid"], 300000)
+        self.assertEqual(check["out_of_pocket"] - 500000, copay["most_paid"])
+
     def test_mohan_heart_claim_in_year_2(self):
         mix = solver.claim_check(self.family, self.result["picks"], "mohan", 600000, 2, "diabetes", "cardiac")
         usual = solver.claim_check(self.family, [self.result["usual_pick"]], "mohan", 600000, 2, "diabetes", "cardiac")
@@ -101,11 +124,34 @@ class OtherFamilies(unittest.TestCase):
         self.assertTrue(all(p["plan_type"] in ("senior", "super_topup") for p in ramesh))
 
     def test_office_cover(self):
-        self.check_valid("office-cover-lucknow")
+        result = self.check_valid("office-cover-lucknow")
+        gaps = {c["members"][0]: c for c in result["mix_catches"] if c["code"] == "topup_on_office_cover"}
+        self.assertEqual(set(gaps), {"imran", "ayesha", "zoya"})
+        self.assertIn("bills between ₹5 lakh and ₹10 lakh are not covered", gaps["imran"]["text"])
+        self.assertIn("bills up to ₹5 lakh are not covered", gaps["ayesha"]["text"])
 
     def test_budget_too_small(self):
         family = dict(FAMILIES["demo-pune"], budget=20000)
         self.assertEqual(solver.solve(family, POLICIES)["status"], "no_fit")
+
+
+class Catches(unittest.TestCase):
+    def test_built_from_the_fields(self):
+        red_carpet = next(p for p in POLICIES if p["id"] == "star-red-carpet-10l")
+        self.assertEqual(solver.policy_catches(red_carpet), [
+            "You pay 30% of every claim.",
+            "Illnesses you already have are covered after 1 year.",
+            "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
+            "Room rent up to 1% of the cover, at most ₹4,000 a day.",
+            "Heart treatment, cataract, stroke, cancer and fractures have sub-limits. Check the policy wording for the amounts.",
+        ])
+        topup = next(p for p in POLICIES if p["id"] == "cigna-super-top-up-25l-10l")
+        self.assertEqual(solver.policy_catches(topup)[0], "Pays only after the year's bills cross ₹10 lakh.")
+
+    def test_other_catches_do_not_repeat_the_fields(self):
+        for p in POLICIES:
+            built = solver.policy_catches(dict(p, other_catches=[]))
+            self.assertFalse(set(p["other_catches"]) & set(built), p["id"])
 
 
 class Formatting(unittest.TestCase):
@@ -113,6 +159,11 @@ class Formatting(unittest.TestCase):
         self.assertEqual(solver.inr(180000), "₹1,80,000")
         self.assertEqual(solver.inr(10500000), "₹1,05,00,000")
         self.assertEqual(solver.inr(950), "₹950")
+
+    def test_lakhs(self):
+        self.assertEqual(solver.lakhs(1000000), "₹10 lakh")
+        self.assertEqual(solver.lakhs(10000000), "₹1 crore")
+        self.assertEqual(solver.lakhs(250000), "₹2,50,000")
 
 
 if __name__ == "__main__":

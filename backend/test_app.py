@@ -159,6 +159,57 @@ class Explain(unittest.TestCase):
         self.assertEqual(client.post("/chat", json={"message": "hi", "recommendationId": "rec-x"}).status_code, 404)
 
 
+class Summary(unittest.TestCase):
+    def setUp(self):
+        self.rec_id = client.post("/recommend", json={"family": DEMO}).json()["id"]
+
+    def summarise(self, reply=None, error=None):
+        with mock.patch.object(app.llm, "ask_json", return_value=reply, side_effect=error) as ask:
+            body = client.post("/summary", json={"recommendationId": self.rec_id}).json()
+        return body, ask
+
+    def test_returns_sarvam_text_from_the_solver_facts(self):
+        reply = {"why": "The mix costs ₹11,000 less a year and gives Mohan cover from year 2.",
+                 "watch": ["Mohan pays 30% of each claim on Red Carpet — up to ₹3,00,000."]}
+        body, ask = self.summarise(reply)
+        self.assertEqual(body["source"], "llm")
+        self.assertEqual(body["watch"], ["Mohan pays 30% of each claim on Red Carpet, up to ₹3,00,000."])
+        self.assertIn("In year 2, only Senior Citizens Red Carpet pays", ask.call_args.args[0])
+
+    def test_is_stored_so_sarvam_is_asked_once(self):
+        self.summarise({"why": "The mix gives everyone more cover.", "watch": []})
+        body, ask = self.summarise({"why": "Something else.", "watch": []})
+        ask.assert_not_called()
+        self.assertEqual(body["why"], "The mix gives everyone more cover.")
+
+    def test_an_amount_not_in_the_facts_falls_back_to_the_solver(self):
+        body, _ = self.summarise({"why": "The mix saves ₹25,000 a year.", "watch": []})
+        self.assertEqual(body["source"], "solver")
+        self.assertIn("₹11,000 less a year", body["why"])
+        self.assertEqual(len(body["watch"]), 3)
+
+    def test_a_name_not_in_the_family_falls_back_to_the_solver(self):
+        body, _ = self.summarise({"why": "Rachel, Sneha and Aarav share the floater.", "watch": []})
+        self.assertEqual(body["source"], "solver")
+
+    def test_names_come_back_in_their_own_case(self):
+        body, _ = self.summarise({"why": "Sneha and Mohan are covered.", "watch": ["manipalcigna asks for star health's papers."]})
+        self.assertEqual(body["watch"], ["ManipalCigna asks for Star Health's papers."])
+
+    def test_lakh_amounts_from_the_facts_are_allowed(self):
+        body, _ = self.summarise({"why": "Mohan and Lata share a 25 lakh top-up.", "watch": []})
+        self.assertEqual(body["source"], "llm")
+
+    def test_sarvam_failure_falls_back_to_the_solver(self):
+        body, _ = self.summarise(error=RuntimeError("Sarvam is down"))
+        self.assertEqual(body["source"], "solver")
+        body, ask = self.summarise({"why": "The mix gives everyone more cover.", "watch": []})
+        self.assertEqual(body["source"], "llm")
+
+    def test_unknown_recommendation_is_a_404(self):
+        self.assertEqual(client.post("/summary", json={"recommendationId": "rec-x"}).status_code, 404)
+
+
 class Storage(unittest.TestCase):
     def test_stores_the_turn_and_the_family_for_the_session(self):
         reply = {"reply": "Noted.", "family": {"members": [

@@ -133,6 +133,23 @@ def recommendation(rec_id):
     return json.loads(row["result"]) if row else None
 
 
+def recommendation_family(rec_id):
+    """The Family a recommendation ran on, as a dict, or None."""
+    with closing(connect()) as conn:
+        row = conn.execute("SELECT family FROM recommendations WHERE id = ?", (rec_id,)).fetchone()
+    return json.loads(row["family"]) if row else None
+
+
+def save_summary(rec_id, summary):
+    """Keeps the summary inside the stored /recommend response, so it is written once."""
+    with closing(connect()) as conn, conn:
+        row = conn.execute("SELECT rowid, result FROM recommendations WHERE id = ?", (rec_id,)).fetchone()
+        if row:
+            result = dict(json.loads(row["result"]), summary=summary)
+            conn.execute("UPDATE recommendations SET result = ? WHERE rowid = ?",
+                         (json.dumps(result, ensure_ascii=False), row["rowid"]))
+
+
 def _policy_row(position, p):
     waits = p["waiting_periods_months"]
     return (p["id"], position, p["insurer"], p["product"], p["plan_type"], p["sum_insured"], p["deductible"],
