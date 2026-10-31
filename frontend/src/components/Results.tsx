@@ -287,6 +287,7 @@ function CoverMap({ rec, family, indexOf }: { rec: Recommendation; family: Famil
       const usual = rec.usual?.policies.find((p) => p.memberIds.includes(m.id));
       return {
         m,
+        office: family.officeCover?.memberIds.includes(m.id) ? family.officeCover.amount : 0,
         base: policies.filter((p) => p.kind !== "super_topup"),
         topUps: policies.filter((p) => p.kind === "super_topup"),
         total: rec.memberCover[m.id] ?? 0,
@@ -303,6 +304,7 @@ function CoverMap({ rec, family, indexOf }: { rec: Recommendation; family: Famil
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold text-ink">How much each person can claim in one year</h3>
         <div className="flex gap-3 text-xs text-muted">
+          {rows.some((r) => r.office > 0) && <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-amber" />Office cover</span>}
           <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-navy" />Base plan</span>
           <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-sky" />Super top-up</span>
           {rec.usual && <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm border border-dashed border-muted" />Usual pick, shared</span>}
@@ -310,11 +312,14 @@ function CoverMap({ rec, family, indexOf }: { rec: Recommendation; family: Famil
       </div>
       <p className="mb-4 text-xs text-muted">Shared plans split this limit with the others on the same plan.</p>
       <ul className="space-y-3">
-        {rows.map(({ m, base, topUps, total, usual }) => (
+        {rows.map(({ m, office, base, topUps, total, usual }) => (
           <li key={m.id} className="grid grid-cols-[2.5rem_1fr_4.5rem] items-center gap-3">
             <Avatar name={m.name} index={indexOf(m.id)} />
             <div className="space-y-1">
               <div className="flex h-5 overflow-hidden rounded-md bg-canvas" role="img" aria-label={`${m.name}: up to ${cover(total)}`}>
+                {office > 0 && (
+                  <span className="h-full bg-amber" style={{ width: pct(office) }} title={`Office cover ${cover(office)}`} />
+                )}
                 {base.map((p) => (
                   <span key={p.id} className="h-full bg-navy" style={{ width: pct(p.sumInsured) }} title={`${p.product} ${cover(p.sumInsured)}`} />
                 ))}
