@@ -12,6 +12,11 @@ const MIN_SPEECH_LEVEL = 0.12;
 const MIN_SPEECH_MS = 250;
 const PAUSE_MS = 1300;
 const NO_SPEECH_MS = 8000;
+// Barge in: while a reply is read aloud, the mic listens for the user cutting in.
+// Stricter than normal speech, so echo from the speaker doesn't trigger it.
+const BARGE_ABOVE_FLOOR = 0.18;
+const BARGE_MIN_LEVEL = 0.22;
+const BARGE_MS = 200;
 
 function pickMimeType(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
@@ -26,11 +31,15 @@ type Options = {
   onNoSpeech?: () => void;
   /** Stop by itself once the speaker pauses. */
   autoStop?: boolean;
+  /** Called when the user starts speaking while the mic is armed. */
+  onBargeIn?: () => void;
 };
 
 /** Records one voice clip and exposes live input levels for a waveform. */
-export function useRecorder({ onClip, onNoSpeech, autoStop = false }: Options) {
+export function useRecorder({ onClip, onNoSpeech, autoStop = false, onBargeIn }: Options) {
   const [recording, setRecording] = useState(false);
+  // Armed: the mic is open and watching for speech, but not recording yet.
+  const [armed, setArmed] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [levels, setLevels] = useState<number[]>(() => Array(BARS).fill(0));
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +50,12 @@ export function useRecorder({ onClip, onNoSpeech, autoStop = false }: Options) {
   const frame = useRef<number>(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const cancelled = useRef(false);
+  const opening = useRef(false);
+  const armedRef = useRef(false);
+  const promoteSoon = useRef(false);
+  const abortOpen = useRef(false);
+  const promote = useRef<(() => void) | null>(null);
+  const onBargeInRef = useRef(onBargeIn);
   const onClipRef = useRef(onClip);
   const onNoSpeechRef = useRef(onNoSpeech);
   const autoStopRef = useRef(autoStop);
@@ -48,7 +63,8 @@ export function useRecorder({ onClip, onNoSpeech, autoStop = false }: Options) {
     onClipRef.current = onClip;
     onNoSpeechRef.current = onNoSpeech;
     autoStopRef.current = autoStop;
-  }, [onClip, onNoSpeech, autoStop]);
+    onBargeInRef.current = onBargeIn;
+  }, [onClip, onNoSpeech, autoStop, onBargeIn]);
 
   const cleanup = useCallback(() => {
     cancelAnimationFrame(frame.current);
@@ -57,28 +73,55 @@ export function useRecorder({ onClip, onNoSpeech, autoStop = false }: Options) {
     audioCtx.current?.close().catch(() => {});
     stream.current = null;
     audioCtx.current = null;
+    armedRef.current = false;
+    promoteSoon.current = false;
+    promote.current = null;
     setLevels(Array(BARS).fill(0));
     setRecording(false);
-  }, []);
-
-  const stop = useCallback(() => {
-    if (recorder.current?.state === "recording") recorder.current.stop();
+    setArmed(false);
   }, []);
 
   const cancel = useCallback(() => {
     cancelled.current = true;
-    stop();
-  }, [stop]);
+    promoteSoon.current = false;
+    if (opening.current) abortOpen.current = true;
+    if (recorder.current?.state === "recording") recorder.current.stop();
+    else if (armedRef.current) cleanup();
+  }, [cleanup]);
 
-  const start = useCallback(async () => {
+  const stop = useCallback(() => {
+    if (recorder.current?.state === "recording") recorder.current.stop();
+    else if (armedRef.current) cancel();
+  }, [cancel]);
+
+  /**
+   * Opens the mic and records. With `armed`, the mic only watches for speech and starts
+   * recording once the user talks (barge in). Calling start again while armed records now.
+   */
+  const start = useCallback(async ({ armed: arm = false }: { armed?: boolean } = {}) => {
     if (recorder.current?.state === "recording") return;
+    if (armedRef.current) {
+      if (!arm) promote.current?.();
+      return;
+    }
+    if (opening.current) {
+      if (!arm) promoteSoon.current = true;
+      return;
+    }
+    opening.current = true;
+    abortOpen.current = false;
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      opening.current = false;
       setError("This browser can't record audio. Please type instead.");
       return;
     }
     try {
       const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      if (abortOpen.current) {
+        s.getTracks().forEach((t) => t.stop());
+        return;
+      }
       stream.current = s;
       const mimeType = pickMimeType();
       const rec = new MediaRecorder(s, mimeType ? { mimeType } : undefined);
@@ -99,11 +142,33 @@ export function useRecorder({ onClip, onNoSpeech, autoStop = false }: Options) {
       ctx.createMediaStreamSource(s).connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
       // Hands-free: learn the room's noise floor, then stop after speech and a pause.
-      const began = performance.now();
+      let began = performance.now();
       let last = began;
       let floor = 1;
       let speechMs = 0;
       let lastLoud = began;
+      let bargeMs = 0;
+      let startedAt = Date.now();
+
+      const record = () => {
+        if (rec.state !== "inactive") return;
+        armedRef.current = false;
+        promote.current = null;
+        setArmed(false);
+        began = performance.now();
+        lastLoud = began;
+        speechMs = bargeMs;
+        startedAt = Date.now();
+        setSeconds(0);
+        timer.current = setInterval(() => {
+          const sec = (Date.now() - startedAt) / 1000;
+          setSeconds(sec);
+          if (sec >= MAX_SECONDS) stop();
+        }, 200);
+        rec.start();
+        setRecording(true);
+      };
+
       const tick = () => {
         analyser.getByteFrequencyData(data);
         const step = Math.max(1, Math.floor(data.length / BARS));
@@ -118,6 +183,14 @@ export function useRecorder({ onClip, onNoSpeech, autoStop = false }: Options) {
           speechMs += now - last;
           lastLoud = now;
         }
+        if (armedRef.current) {
+          const loud = level > Math.max(floor + BARGE_ABOVE_FLOOR, BARGE_MIN_LEVEL);
+          bargeMs = loud ? bargeMs + (now - last) : Math.max(0, bargeMs - (now - last) / 2);
+          if (bargeMs >= BARGE_MS) {
+            onBargeInRef.current?.();
+            record();
+          }
+        }
         last = now;
         if (autoStopRef.current && rec.state === "recording") {
           if (speechMs >= MIN_SPEECH_MS && now - lastLoud > PAUSE_MS) {
@@ -130,27 +203,26 @@ export function useRecorder({ onClip, onNoSpeech, autoStop = false }: Options) {
         }
         frame.current = requestAnimationFrame(tick);
       };
-      tick();
-
-      const startedAt = Date.now();
-      setSeconds(0);
-      timer.current = setInterval(() => {
-        const sec = (Date.now() - startedAt) / 1000;
-        setSeconds(sec);
-        if (sec >= MAX_SECONDS) stop();
-      }, 200);
-
       recorder.current = rec;
-      rec.start();
-      setRecording(true);
+      if (arm && !promoteSoon.current) {
+        armedRef.current = true;
+        promote.current = record;
+        setArmed(true);
+      } else {
+        record();
+      }
+      promoteSoon.current = false;
+      tick();
     } catch (e) {
       cleanup();
       const denied = e instanceof DOMException && e.name === "NotAllowedError";
       setError(denied ? "Microphone access is blocked. Allow it in the browser, or type instead." : "Couldn't start the microphone.");
+    } finally {
+      opening.current = false;
     }
   }, [cleanup, stop]);
 
   useEffect(() => () => cleanup(), [cleanup]);
 
-  return { recording, seconds, levels, error, start, stop, cancel };
+  return { recording, armed, seconds, levels, error, start, stop, cancel };
 }

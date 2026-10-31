@@ -7,7 +7,7 @@ export type TalkState = "listening" | "thinking" | "speaking" | "idle";
 const LABELS: Record<TalkState, string> = {
   listening: "Listening",
   thinking: "Thinking",
-  speaking: "Speaking. Tap to interrupt.",
+  speaking: "Speaking. Talk or tap to cut in.",
   idle: "Tap to talk",
 };
 
