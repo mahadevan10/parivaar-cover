@@ -7,7 +7,6 @@ import demoOutput from "@shared/examples/demo_solver_output.json";
 import claimChecks from "./claim_checks.json";
 import type { FamilyProfile, Recommendation } from "../types";
 import {
-  fromSolverFamily,
   remapMembers,
   toRecommendation,
   type SolverClaimSeries,
@@ -16,11 +15,6 @@ import {
 } from "../solver";
 
 const DEMO_SOLVER_FAMILY = (families.families as SolverFamily[]).find((f) => f.id === "demo-pune")!;
-
-export const DEMO_FAMILY: FamilyProfile = {
-  ...fromSolverFamily(DEMO_SOLVER_FAMILY),
-  members: fromSolverFamily(DEMO_SOLVER_FAMILY).members.map((m) => ({ ...m, heardFrom: "Demo family" })),
-};
 
 export const DEMO_OUTPUT = demoOutput as SolverOutput;
 /** The demo family always has a usual pick. */

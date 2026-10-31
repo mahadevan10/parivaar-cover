@@ -19,10 +19,9 @@ type Props = {
   busy: boolean;
   onChange: (family: FamilyProfile) => void;
   onFindMix: () => void;
-  onUseDemo: () => void;
 };
 
-export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange, onFindMix, onUseDemo }: Props) {
+export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange, onFindMix }: Props) {
   const updateMember = (id: string, patch: Partial<Member>) =>
     onChange({ ...family, members: family.members.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
   const removeMember = (id: string) =>
@@ -46,7 +45,7 @@ export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange
       </header>
 
       {empty ? (
-        <EmptyBoard onUseDemo={onUseDemo} />
+        <EmptyBoard />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {family.members.map((m, i) => (
@@ -116,7 +115,7 @@ function Readiness({ missing, ready, empty }: { missing: string[]; ready: boolea
   );
 }
 
-function EmptyBoard({ onUseDemo }: { onUseDemo: () => void }) {
+function EmptyBoard() {
   return (
     <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-line bg-white px-6 py-10 text-center">
       <div className="flex -space-x-3" aria-hidden="true">
@@ -130,9 +129,6 @@ function EmptyBoard({ onUseDemo }: { onUseDemo: () => void }) {
           Names, ages, health conditions, city and budget. Each person appears here as you mention them.
         </p>
       </div>
-      <button type="button" onClick={onUseDemo} className="rounded-full border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-navy-soft">
-        Use the demo family
-      </button>
     </div>
   );
 }
