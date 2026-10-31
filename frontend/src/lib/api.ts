@@ -44,10 +44,12 @@ export async function getRecommendation(family: FamilyProfile, sessionId: string
 
 export type Transcript = { transcript: string; languageCode?: string };
 
-export async function transcribe(audio: Blob): Promise<Transcript> {
+/** `language` is the session's language once known, e.g. "hi-IN". Leave it out to auto-detect. */
+export async function transcribe(audio: Blob, language?: string): Promise<Transcript> {
   const form = new FormData();
   const ext = audio.type.includes("mp4") ? "m4a" : audio.type.includes("ogg") ? "ogg" : "webm";
   form.append("file", audio, `speech.${ext}`);
+  if (language) form.append("language", language);
   const res = await fetch("/api/stt", { method: "POST", body: form });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `Speech service failed with ${res.status}`);

@@ -105,7 +105,7 @@ export function App() {
   }, []);
 
   const send = useCallback(async (text: string, meta: SendMeta) => {
-    if (/^find my mix$/i.test(text.trim()) && ready && !rec) {
+    if (/^find my mix[.!]?$/i.test(text.trim()) && ready && !rec) {
       push({ role: "user", text, via: meta.via, language: meta.language });
       void findMix();
       return;

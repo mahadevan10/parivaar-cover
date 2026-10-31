@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@/lib/types";
 import { languageName } from "@/lib/format";
 import { Composer, type SendMeta } from "./Composer";
-import { DocIcon, MicIcon, ShieldIcon } from "./icons";
+import { useSpeaker } from "@/lib/useSpeaker";
+import { DocIcon, MicIcon, ShieldIcon, SpeakerIcon, SpeakerOffIcon } from "./icons";
 
 type Props = {
   messages: ChatMessage[];
@@ -21,6 +22,89 @@ export function ChatPanel({ messages, loading, quickReplies, policyNames, placeh
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, loading]);
+
+  // Voice replies. A reply is read aloud when the user spoke, or always in talk mode.
+  // In talk mode the mic opens again once the reply has been read.
+  const speaker = useSpeaker();
+  const { speak } = speaker;
+  const [talkMode, setTalkMode] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [listenToken, setListenToken] = useState(0);
+  const prefs = useRef({ talkMode, muted });
+  useEffect(() => {
+    prefs.current = { talkMode, muted };
+  }, [talkMode, muted]);
+  const spoken = useRef(new Set(messages.map((m) => m.id)));
+
+  useEffect(() => {
+    const last = messages.at(-1);
+    if (!last || last.role !== "assistant" || spoken.current.has(last.id)) return;
+    spoken.current.add(last.id);
+    const user = messages.findLast((m) => m.role === "user");
+    const { talkMode: talking, muted: silent } = prefs.current;
+    if (!talking && user?.via !== "voice") return;
+    const listenAgain = () => {
+      if (prefs.current.talkMode) setListenToken((t) => t + 1);
+    };
+    if (silent) {
+      queueMicrotask(listenAgain);
+      return;
+    }
+    void speak(last.text, user?.language).then((r) => r === "done" && listenAgain());
+  }, [messages, speak]);
+
+  const toggleTalkMode = () => {
+    const on = !talkMode;
+    setTalkMode(on);
+    if (on) setListenToken((t) => t + 1);
+    else speaker.stop();
+  };
+
+  const toggleMuted = () => {
+    setMuted(!muted);
+    if (!muted && speaker.speaking) {
+      speaker.stop();
+      if (talkMode) setListenToken((t) => t + 1);
+    }
+  };
+
+  const toolbar = (
+    <div className="mb-2 flex items-center gap-2">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={talkMode}
+        onClick={toggleTalkMode}
+        className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+          talkMode ? "border-sky bg-sky-soft text-navy" : "border-line text-muted hover:text-navy"
+        }`}
+      >
+        <span className={`relative h-3.5 w-6 rounded-full transition ${talkMode ? "bg-sky" : "bg-line"}`} aria-hidden="true">
+          <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-white transition-all ${talkMode ? "left-3" : "left-0.5"}`} />
+        </span>
+        Talk mode
+      </button>
+      {speaker.speaking && (
+        <button
+          type="button"
+          onClick={speaker.stop}
+          className="pop-in flex items-center gap-1.5 rounded-full bg-navy-soft px-2.5 py-1 text-xs text-navy hover:bg-sky-soft"
+        >
+          <SpeakerIcon className="h-3.5 w-3.5 animate-pulse text-sky" />
+          Reading aloud. Tap to stop.
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={toggleMuted}
+        aria-label={muted ? "Read replies aloud" : "Mute replies"}
+        title={muted ? "Read replies aloud" : "Mute replies"}
+        className="ml-auto rounded-full p-1.5 text-muted hover:bg-canvas hover:text-navy"
+      >
+        {muted ? <SpeakerOffIcon className="h-4 w-4" /> : <SpeakerIcon className="h-4 w-4" />}
+      </button>
+    </div>
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -53,7 +137,15 @@ export function ChatPanel({ messages, loading, quickReplies, policyNames, placeh
         </div>
       )}
 
-      <Composer onSend={onSend} disabled={loading} placeholder={placeholder} />
+      <Composer
+        onSend={onSend}
+        disabled={loading}
+        placeholder={placeholder}
+        handsFree={talkMode}
+        listenToken={listenToken}
+        onMicStart={speaker.stop}
+        toolbar={toolbar}
+      />
     </div>
   );
 }

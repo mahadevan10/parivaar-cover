@@ -1,5 +1,6 @@
 // Proxies a short voice clip to Sarvam AI speech-to-text, so the API key never
 // reaches the browser. Docs: https://docs.sarvam.ai/api-reference-docs/speech-to-text/transcribe
+import { SARVAM_LANGUAGES } from "@/lib/sarvam";
 
 const SARVAM_URL = "https://api.sarvam.ai/speech-to-text";
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -9,6 +10,7 @@ const KEYTERMS = [
   "super top-up", "family floater", "co-pay", "room rent", "waiting period", "deductible",
   "sum insured", "diabetes", "diabetic", "lakh", "premium",
   "Rahul", "Sneha", "Aarav", "Mohan", "Lata", "Pune",
+  "परिवार", "माताजी", "पिताजी", "बहन", "भाई", "सास", "ससुर", "शुगर", "बीमा", "लाख",
 ];
 
 export async function POST(request: Request) {
@@ -31,7 +33,11 @@ export async function POST(request: Request) {
 
   const form = new FormData();
   form.append("file", audio, file instanceof File ? file.name : "speech.webm");
-  form.append("language_code", process.env.SARVAM_STT_LANGUAGE ?? "unknown");
+  // Once a session's language is known, the browser sends it back. A fixed language
+  // transcribes better than detecting it again on every short clip.
+  const hint = incoming.get("language");
+  const language = typeof hint === "string" && SARVAM_LANGUAGES.has(hint) ? hint : process.env.SARVAM_STT_LANGUAGE || "unknown";
+  form.append("language_code", language);
   form.append("keyterms", JSON.stringify(KEYTERMS));
   if (process.env.SARVAM_STT_MODEL) form.append("model", process.env.SARVAM_STT_MODEL);
   if (process.env.SARVAM_STT_MODE) form.append("mode", process.env.SARVAM_STT_MODE);
