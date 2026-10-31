@@ -22,6 +22,8 @@ Chat and voice UI for Parivaar Cover. Read the root `CLAUDE.md` first, then `CON
 | `src/components/Results.tsx` | Compare, cover map, claim check, policy cards |
 | `src/components/FinePrintSheet.tsx` | Fine print for one policy |
 | `src/app/api/stt/route.ts` | Sarvam speech-to-text proxy (keeps the key server side) |
+| `src/app/api/tts/route.ts` | Sarvam text-to-speech proxy, reads replies aloud |
+| `src/lib/useRecorder.ts`, `useSpeaker.ts` | Mic recording with pause detection for talk mode; reply playback |
 | `src/lib/api.ts` | Backend client, falls back to the mock |
 | `src/lib/types.ts` | Request and response shapes (mirror of `docs/api-contract.md`) |
 | `src/lib/solver.ts` | Backend formats and the mapping to UI types |

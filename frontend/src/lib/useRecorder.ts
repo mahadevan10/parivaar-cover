@@ -6,6 +6,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export const MAX_SECONDS = 28;
 const BARS = 32;
 
+// Hands-free tuning. Levels are 0 to 1, averaged over the speech band.
+const SPEECH_ABOVE_FLOOR = 0.1;
+const MIN_SPEECH_LEVEL = 0.12;
+const MIN_SPEECH_MS = 250;
+const PAUSE_MS = 1300;
+const NO_SPEECH_MS = 8000;
+
 function pickMimeType(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
   return ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"].find((t) =>
@@ -13,8 +20,16 @@ function pickMimeType(): string | undefined {
   );
 }
 
+type Options = {
+  onClip: (clip: Blob) => void;
+  /** Hands-free mode: called when nobody spoke, after the clip is dropped. */
+  onNoSpeech?: () => void;
+  /** Stop by itself once the speaker pauses. */
+  autoStop?: boolean;
+};
+
 /** Records one voice clip and exposes live input levels for a waveform. */
-export function useRecorder(onClip: (clip: Blob) => void) {
+export function useRecorder({ onClip, onNoSpeech, autoStop = false }: Options) {
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [levels, setLevels] = useState<number[]>(() => Array(BARS).fill(0));
@@ -27,9 +42,13 @@ export function useRecorder(onClip: (clip: Blob) => void) {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const cancelled = useRef(false);
   const onClipRef = useRef(onClip);
+  const onNoSpeechRef = useRef(onNoSpeech);
+  const autoStopRef = useRef(autoStop);
   useEffect(() => {
     onClipRef.current = onClip;
-  }, [onClip]);
+    onNoSpeechRef.current = onNoSpeech;
+    autoStopRef.current = autoStop;
+  }, [onClip, onNoSpeech, autoStop]);
 
   const cleanup = useCallback(() => {
     cancelAnimationFrame(frame.current);
@@ -52,6 +71,7 @@ export function useRecorder(onClip: (clip: Blob) => void) {
   }, [stop]);
 
   const start = useCallback(async () => {
+    if (recorder.current?.state === "recording") return;
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setError("This browser can't record audio. Please type instead.");
@@ -78,10 +98,36 @@ export function useRecorder(onClip: (clip: Blob) => void) {
       analyser.fftSize = 128;
       ctx.createMediaStreamSource(s).connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
+      // Hands-free: learn the room's noise floor, then stop after speech and a pause.
+      const began = performance.now();
+      let last = began;
+      let floor = 1;
+      let speechMs = 0;
+      let lastLoud = began;
       const tick = () => {
         analyser.getByteFrequencyData(data);
         const step = Math.max(1, Math.floor(data.length / BARS));
         setLevels(Array.from({ length: BARS }, (_, i) => data[i * step] / 255));
+
+        const now = performance.now();
+        let sum = 0;
+        for (let i = 1; i <= 16; i++) sum += data[i];
+        const level = sum / 16 / 255;
+        floor = Math.min(floor + 0.0005, level);
+        if (level > Math.max(floor + SPEECH_ABOVE_FLOOR, MIN_SPEECH_LEVEL)) {
+          speechMs += now - last;
+          lastLoud = now;
+        }
+        last = now;
+        if (autoStopRef.current && rec.state === "recording") {
+          if (speechMs >= MIN_SPEECH_MS && now - lastLoud > PAUSE_MS) {
+            stop();
+          } else if (speechMs < MIN_SPEECH_MS && now - began > NO_SPEECH_MS) {
+            cancelled.current = true;
+            stop();
+            onNoSpeechRef.current?.();
+          }
+        }
         frame.current = requestAnimationFrame(tick);
       };
       tick();

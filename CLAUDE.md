@@ -38,7 +38,7 @@ The deck (`stage1_ppt/slide_content.md`, slide 5) planned this stack. For a 6-ho
 
 | Layer | Planned in the deck | Hackathon build |
 |---|---|---|
-| Frontend | React web, React Native mini-app | Next.js 16 (App Router), TypeScript, Tailwind 4 in `frontend/`. Mock backend built in until the API is live. |
+| Frontend | React web, React Native mini-app | Next.js 16 (App Router), TypeScript, Tailwind 4 in `frontend/`. Calls the FastAPI backend when `NEXT_PUBLIC_API_BASE_URL` is set, otherwise a built-in mock using `shared/` data. |
 | Backend / solver | Python + FastAPI, Google OR-Tools | Python 3, FastAPI and OR-Tools CP-SAT in `backend/`. Policies and families are JSON in `shared/`. |
 | AI | Claude Sonnet 5.5; Bhashini / Sarvam for Indian languages | Voice input: Sarvam AI speech-to-text (`saaras:v4`, auto language detect) via `frontend/src/app/api/stt`. LLM: Sarvam `sarvam-105b-conversations` in `backend/llm.py`, for intake and explanations only. |
 | Policy data | PostgreSQL + pgvector, PDF parsing | JSON in `shared/`. Chat turns, each session's family and every recommendation are stored in SQLite (`backend/store.py`, file `backend/parivaar.db`). |

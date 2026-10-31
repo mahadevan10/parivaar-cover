@@ -17,8 +17,8 @@ const RELATIONS: [RegExp, string][] = [
   [/\b(husband|pati)\b|पति/i, "husband"],
   [/\b(son|beta)\b|बेटा/i, "son"],
   [/\b(daughter|beti)\b|बेटी/i, "daughter"],
-  [/\b(father|dad|papa|pitaji)\b|पापा|पिताजी/i, "father"],
-  [/\b(mother|mom|mum|mummy|maa|mataji)\b|माँ|मां|मम्मी/i, "mother"],
+  [/\b(father|dad|papa|pitaji)\b|पापा|पिता/i, "father"],
+  [/\b(mother|mom|mum|mummy|maa|mataji)\b|माँ|मां|माता|मम्मी/i, "mother"],
 ];
 
 const CONDITIONS: [RegExp, string][] = [

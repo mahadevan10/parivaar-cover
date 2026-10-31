@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { transcribe } from "@/lib/api";
 import { languageName } from "@/lib/format";
+import { SARVAM_LANGUAGES } from "@/lib/sarvam";
 import { MAX_SECONDS, useRecorder } from "@/lib/useRecorder";
 import { MicIcon, SendIcon, SpinnerIcon, StopIcon, XIcon } from "./icons";
 
@@ -12,24 +13,44 @@ type VoiceDraft = { language?: string; numbers: string[] };
 
 const NUMBER_RE = /(?:₹\s*)?\d[\d,.]*\s*(?:lakhs?|lacs?|k\b|thousand|crores?|years?|yrs|saal)?/gi;
 
-export function Composer({ onSend, disabled, placeholder }: {
+export function Composer({ onSend, disabled, placeholder, handsFree = false, listenToken = 0, onMicStart, toolbar }: {
   onSend: (text: string, meta: SendMeta) => void;
   disabled: boolean;
   placeholder: string;
+  /** Talk mode: stop on a pause, send without review. */
+  handsFree?: boolean;
+  /** Each new value opens the mic, e.g. after a spoken reply ends. */
+  listenToken?: number;
+  /** Called when the user starts speaking, so a reply being read aloud stops. */
+  onMicStart?: () => void;
+  /** Voice controls shown above the input. */
+  toolbar?: React.ReactNode;
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [voice, setVoice] = useState<VoiceDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // The first Indian language Sarvam detects is kept for the rest of the session.
+  // English is not kept, since people often switch from English to their own language.
+  const sessionLanguage = useRef<string | undefined>(undefined);
 
-  const rec = useRecorder(async (clip) => {
+  const onClip = async (clip: Blob) => {
     setBusy(true);
     setError(null);
     try {
-      const { transcript, languageCode } = await transcribe(clip);
+      const { transcript, languageCode } = await transcribe(clip, sessionLanguage.current);
       if (!transcript) {
         setError("I didn't hear anything. Try again a little closer to the mic.");
+        return;
+      }
+      if (!sessionLanguage.current && languageCode && languageCode !== "en-IN" && SARVAM_LANGUAGES.has(languageCode)) {
+        sessionLanguage.current = languageCode;
+      }
+      if (handsFree) {
+        onSend(text.trim() ? `${text.trim()} ${transcript}` : transcript, { via: "voice", language: languageCode });
+        setText("");
+        setVoice(null);
         return;
       }
       setText((prev) => (prev ? `${prev} ${transcript}` : transcript));
@@ -40,7 +61,27 @@ export function Composer({ onSend, disabled, placeholder }: {
     } finally {
       setBusy(false);
     }
+  };
+
+  const rec = useRecorder({
+    onClip,
+    onNoSpeech: () => setError("I didn't hear anything. Tap the mic when you're ready."),
+    autoStop: handsFree,
   });
+
+  const listen = () => {
+    onMicStart?.();
+    void rec.start();
+  };
+
+  // Talk mode reopens the mic when asked, unless it's already busy.
+  const startRef = useRef(rec.start);
+  useEffect(() => {
+    startRef.current = rec.start;
+  }, [rec.start]);
+  useEffect(() => {
+    if (listenToken > 0) void startRef.current();
+  }, [listenToken]);
 
   // Grow the textarea with its content.
   useEffect(() => {
@@ -64,6 +105,7 @@ export function Composer({ onSend, disabled, placeholder }: {
 
   return (
     <div className="border-t border-line bg-white p-3">
+      {toolbar}
       {voice && !rec.recording && (
         <div className="pop-in mb-2 rounded-xl bg-sky-soft px-3 py-2 text-xs text-ink">
           <div className="flex items-center justify-between gap-2">
@@ -93,7 +135,7 @@ export function Composer({ onSend, disabled, placeholder }: {
 
       <div className="flex items-end gap-2">
         {rec.recording ? (
-          <Recording levels={rec.levels} seconds={rec.seconds} onCancel={rec.cancel} />
+          <Recording levels={rec.levels} seconds={rec.seconds} handsFree={handsFree} onCancel={rec.cancel} />
         ) : (
           <textarea
             ref={inputRef}
@@ -116,7 +158,7 @@ export function Composer({ onSend, disabled, placeholder }: {
         <MicButton
           recording={rec.recording}
           busy={busy}
-          onStart={rec.start}
+          onStart={listen}
           onStop={rec.stop}
         />
 
@@ -133,7 +175,9 @@ export function Composer({ onSend, disabled, placeholder }: {
         )}
       </div>
       <p className="mt-1.5 px-1 text-[11px] text-muted">
-        Speak in Hindi, English or any Indian language. Voice by Sarvam AI.
+        {handsFree
+          ? "Talk mode is on. I send when you pause, and read my reply aloud."
+          : "Speak in Hindi, English or any Indian language. Voice by Sarvam AI."}
       </p>
     </div>
   );
@@ -168,7 +212,12 @@ function MicButton({ recording, busy, onStart, onStop }: {
   );
 }
 
-function Recording({ levels, seconds, onCancel }: { levels: number[]; seconds: number; onCancel: () => void }) {
+function Recording({ levels, seconds, handsFree, onCancel }: {
+  levels: number[];
+  seconds: number;
+  handsFree: boolean;
+  onCancel: () => void;
+}) {
   const left = Math.max(0, Math.ceil(MAX_SECONDS - seconds));
   return (
     <div className="flex min-h-11 flex-1 items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-3" aria-live="polite">
@@ -183,7 +232,7 @@ function Recording({ levels, seconds, onCancel }: { levels: number[]; seconds: n
       <span className={`w-10 text-right text-xs tabular-nums ${left <= 5 ? "font-semibold text-rose-600" : "text-rose-700/80"}`}>
         0:{String(Math.floor(seconds)).padStart(2, "0")}
       </span>
-      <span className="sr-only">Listening. Tap stop when you finish.</span>
+      <span className="sr-only">{handsFree ? "Listening. I'll send when you pause." : "Listening. Tap stop when you finish."}</span>
     </div>
   );
 }
