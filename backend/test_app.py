@@ -23,19 +23,21 @@ class Recommend(unittest.TestCase):
 
     def test_returns_the_deck_mix_with_an_id(self):
         self.assertEqual(self.res.status_code, 200)
-        self.assertEqual(self.body["total_premium"], 107000)
+        self.assertEqual(self.body["solution"]["total_premium"], 107000)
         self.assertTrue(self.body["id"].startswith("rec-"))
+        self.assertEqual(self.body["solution"]["id"], self.body["id"])
         self.assertIn(self.body["id"], app.RECOMMENDATIONS)
 
-    def test_default_claim_is_mohans_heart_procedure_for_years_1_to_4(self):
-        [claim] = self.body["claim_checks"]
-        self.assertEqual(claim["label"], "₹6,00,000 heart procedure for Mohan")
-        covered = [(y["year"], y["mix"]["covered"], y["usual"]["covered"]) for y in claim["by_year"]]
+    def test_default_claims_for_years_1_to_4(self):
+        heart, cancer = self.body["claim_checks"]
+        self.assertEqual((heart["id"], heart["label"], heart["amount"]), ("mohan-cardiac", "Heart procedure", 600000))
+        covered = [(y["policy_year"], y["mix"]["covered"], y["usual"]["covered"]) for y in heart["by_year"]]
         self.assertEqual(covered, [(1, False, False), (2, True, False), (3, True, False), (4, True, True)])
+        self.assertEqual((cancer["id"], cancer["member_id"]), ("rahul-cancer", "rahul"))
 
     def test_budget_too_small(self):
         body = client.post("/recommend", json={"family": dict(DEMO, budget=20000)}).json()
-        self.assertEqual(body["status"], "no_fit")
+        self.assertEqual(body["solution"]["status"], "no_fit")
         self.assertEqual(body["claim_checks"], [])
 
     def test_rejects_missing_age_and_unknown_claim_member(self):
@@ -59,7 +61,8 @@ class Intake(unittest.TestCase):
         self.assertEqual(body["family"]["budget"], 110000)
         self.assertEqual(body["missing"], ["Lata's age", "Office cover", "City"])
         self.assertEqual(body["reply"], "Noted. Which city do you live in?")  # the LLM asked, so no second question
-        self.assertFalse(body["ready"])
+        self.assertFalse(body["readyToOptimise"])
+        self.assertEqual(mohan["heardFrom"], "My father Mohan is 64, diabetic and has high BP. Mother Lata.")
 
     def test_drops_ages_and_conditions_the_user_never_said(self):
         reply = {"reply": "noted.", "family": {"members": [
@@ -73,9 +76,9 @@ class Intake(unittest.TestCase):
         self.assertEqual(got, [("rahul", "Rahul", 36, []), ("sneha", "Sneha", None, []), ("mohan", "Mohan", None, ["diabetes"])])
 
     def test_short_answer_counts_for_the_member_asked_about(self):
-        family = {"members": [{"id": "lata", "name": "Lata", "age": None, "relation": "mother", "conditions": []}]}
+        family = {"members": [{"id": "lata", "name": "Lata", "relation": "mother", "conditions": []}]}
         reply = {"reply": "Thanks.", "family": {"members": [{"name": "Lata", "age": 60, "relation": "mother"}]}}
-        history = [{"role": "assistant", "content": "How old is Lata?"}]
+        history = [{"role": "assistant", "text": "How old is Lata?"}]
         with mock.patch.object(app.llm, "ask_json", return_value=reply):
             body = client.post("/chat", json={"message": "60", "family": family, "history": history}).json()
         self.assertEqual(body["family"]["members"][0]["age"], 60)
@@ -85,17 +88,28 @@ class Intake(unittest.TestCase):
         with mock.patch.object(app.llm, "ask_json", return_value=reply):
             body = client.post("/chat", json={"message": "No one else is ill"}).json()
         self.assertIn("Office cover", body["missing"])
+        self.assertEqual(body["quickReplies"], [])  # "Who is in the family" comes first
 
     def test_ready_when_nothing_is_missing(self):
-        family = dict(copy.deepcopy(DEMO), health_checked=True, office_checked=True)
-        with mock.patch.object(app.llm, "ask_json", return_value={"reply": "Ready.", "family": copy.deepcopy(family)}):
-            body = client.post("/chat", json={"message": "That is all", "family": family}).json()
-        self.assertTrue(body["ready"])
+        llm_family = dict(copy.deepcopy(DEMO), health_checked=True, office_checked=True)
+        family = {"members": copy.deepcopy(DEMO["members"]), "city": "Pune", "budget": 110000,
+                  "healthChecked": True, "officeChecked": True}
+        with mock.patch.object(app.llm, "ask_json", return_value={"reply": "Ready.", "family": llm_family}):
+            body = client.post("/chat", json={"sessionId": "s1", "message": "That is all", "family": family}).json()
+        self.assertTrue(body["readyToOptimise"])
+        self.assertTrue(all(m["heardFrom"] is None for m in body["family"]["members"]))
         self.assertEqual([m["id"] for m in body["family"]["members"]], [m["id"] for m in DEMO["members"]])
 
     def test_sarvam_failure_is_a_502(self):
         with mock.patch.object(app.llm, "ask_json", side_effect=RuntimeError("down")):
             self.assertEqual(client.post("/chat", json={"message": "hi"}).status_code, 502)
+
+
+class QuickReplies(unittest.TestCase):
+    def test_offers_a_reply_for_yes_no_questions(self):
+        family = app.clean_family({"members": [{"name": "Mohan", "age": 64, "conditions": ["diabetes"]}]}, {})
+        self.assertEqual(app.quick_replies(family, ["Health conditions"]), ["No one else has one"])
+        self.assertEqual(app.quick_replies(family, ["Office cover"]), ["No office cover"])
 
 
 class Explain(unittest.TestCase):
@@ -104,12 +118,18 @@ class Explain(unittest.TestCase):
         reply = {"reply": "Mohan's diabetes is covered after 1 year.",
                  "citations": ["star-red-carpet-10l", "made-up-policy"]}
         with mock.patch.object(app.llm, "ask_json", return_value=reply) as ask:
-            body = client.post("/chat", json={"message": "Why Red Carpet?", "recommendation_id": rec_id}).json()
+            body = client.post("/chat", json={"message": "Why Red Carpet?", "recommendationId": rec_id}).json()
         self.assertEqual(body["citations"], ["star-red-carpet-10l"])
         self.assertIn("Mohan's diabetes is covered after 1 year.", ask.call_args.args[0])
 
+    def test_accepts_the_id_the_frontend_builds(self):
+        client.post("/recommend", json={"family": dict(DEMO, id="session-1")})
+        with mock.patch.object(app.llm, "ask_json", return_value={"reply": "Ok.", "citations": []}):
+            res = client.post("/chat", json={"message": "Why?", "recommendationId": "session-1-107000"})
+        self.assertEqual(res.status_code, 200)
+
     def test_unknown_recommendation_is_a_404(self):
-        self.assertEqual(client.post("/chat", json={"message": "hi", "recommendation_id": "rec-x"}).status_code, 404)
+        self.assertEqual(client.post("/chat", json={"message": "hi", "recommendationId": "rec-x"}).status_code, 404)
 
 
 if __name__ == "__main__":
