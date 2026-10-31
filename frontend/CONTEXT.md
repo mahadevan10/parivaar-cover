@@ -2,7 +2,7 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, on `main` (replies read sentence by sentence, language sent to /chat, summary box and catches in this mix)._
+_Last updated: 2026-10-31, on `main` (member notes on the board, replies read sentence by sentence, language sent to /chat, summary box and catches in this mix)._
 
 ## Status
 
@@ -37,7 +37,7 @@ _Last updated: 2026-10-31, on `main` (replies read sentence by sentence, languag
 | Read replies in the language of the reply's script, not the user's | Sarvam needs the text and voice language to match. |
 | Keep the first detected Indian language for the session; never keep English | Fixed language transcribes better on short clips. English is often only the opener. |
 | Two-pane layout: chat on the left, a live canvas on the right (family board, then results) | The user sees their family build up as they talk and can fix any detail in one tap. Phones get Chat / Board tabs. |
-| Every fact keeps a "heard from" quote | Shows where each detail came from, builds trust in voice input. |
+| Member cards show short notes on what matters for that person (age band, conditions and waiting periods, office cover), not the "heard from" quote | The raw transcript added clutter, often in another script. The notes explain what the solver will weigh, with no prices. |
 | Results: compare, per-person cover map, claim check with a year slider, policy cards with catches and clause chips | Matches the deck's Explain step and the Mohan claim story. |
 | No mock: the app always calls the backend | The backend is live, and one code path is easier to trust in the demo. |
 | Contract proposal in `docs/api-contract.md` | `shared/` needs agreement from both developers. |

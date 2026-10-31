@@ -5,7 +5,7 @@ import type { FamilyProfile, Member } from "@/lib/types";
 import { conditionLabel, cover, rupees } from "@/lib/format";
 import { VERIFIED } from "@/lib/family";
 import { Avatar } from "./Avatar";
-import { CheckIcon, MicIcon, PlusIcon, XIcon } from "./icons";
+import { AlertIcon, CheckIcon, PlusIcon, ShieldIcon, XIcon } from "./icons";
 
 let added = 0;
 
@@ -55,6 +55,7 @@ export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange
               member={m}
               index={i}
               flash={changedIds.has(m.id)}
+              officeCover={family.officeCover?.memberIds.includes(m.id) ? family.officeCover.amount : undefined}
               onChange={(patch) => updateMember(m.id, patch)}
               onRemove={() => removeMember(m.id)}
             />
@@ -148,10 +149,29 @@ function Fact({ label, value, flash }: { label: string; value?: string; flash: b
   );
 }
 
-function MemberCard({ member, index, flash, onChange, onRemove }: {
+type Note = { text: string; todo?: boolean };
+
+/** Plain facts about what matters for this person's cover. No prices: those come from the solver. */
+function memberNotes(m: Member, officeCover?: number): Note[] {
+  const notes: Note[] = [];
+  if (m.age == null) notes.push({ text: "Add an age. Prices and plan limits depend on it.", todo: true });
+  else if (m.age >= 60) notes.push({ text: "Senior. Senior plans often carry a co-pay, so we check it." });
+  else if (m.age >= 46) notes.push({ text: "Over 45. Some insurers ask for a health check before cover starts." });
+  else if (m.age < 18) notes.push({ text: "Child. Can join a parent's family floater." });
+  else notes.push({ text: "Adult. Fits a family floater or an individual plan." });
+  if (m.conditions.length > 0) {
+    const names = m.conditions.map(conditionLabel).join(", ");
+    notes.push({ text: `Has ${names}. The waiting period for it decides when claims are paid.` });
+  }
+  if (officeCover) notes.push({ text: `Office cover of ${cover(officeCover)}. A top-up can sit above it.` });
+  return notes;
+}
+
+function MemberCard({ member, index, flash, officeCover, onChange, onRemove }: {
   member: Member;
   index: number;
   flash: boolean;
+  officeCover?: number;
   onChange: (patch: Partial<Member>) => void;
   onRemove: () => void;
 }) {
@@ -250,12 +270,16 @@ function MemberCard({ member, index, flash, onChange, onRemove }: {
         )}
       </div>
 
-      {member.heardFrom && (
-        <p className="mt-3 flex items-start gap-1.5 border-t border-line pt-2 text-xs text-muted">
-          <MicIcon className="mt-px h-3.5 w-3.5 text-sky" />
-          <span className="line-clamp-2 italic">Heard from: “{member.heardFrom}”</span>
-        </p>
-      )}
+      <ul className="mt-3 space-y-1 border-t border-line pt-2 text-xs" aria-label={`What matters for ${member.name}`}>
+        {memberNotes(member, officeCover).map((n) => (
+          <li key={n.text} className={`flex items-start gap-1.5 ${n.todo ? "text-amber-700" : "text-muted"}`}>
+            {n.todo
+              ? <AlertIcon className="mt-px h-3.5 w-3.5 text-amber" />
+              : <ShieldIcon className="mt-px h-3.5 w-3.5 text-sky" />}
+            <span>{n.text}</span>
+          </li>
+        ))}
+      </ul>
     </li>
   );
 }
