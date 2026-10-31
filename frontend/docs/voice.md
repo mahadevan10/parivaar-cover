@@ -11,7 +11,7 @@
 ## Replies read aloud
 
 - A reply is read aloud when the user's last message was spoken, or always in talk mode. A speaker button in the chat mutes it. Tapping the mic or "Reading aloud" stops it.
-- `useSpeaker` posts the reply to `POST /api/tts`, which calls Sarvam text-to-speech and returns a WAV file.
+- `useSpeaker` cuts the reply into sentences (`speechChunks`: the first sentence alone, later short ones joined up to 180 characters), requests them all from `POST /api/tts` at once, and plays them in order. Speech starts as soon as the first sentence is ready. One voice language is picked for the whole reply and sent as `voice`.
 - The voice language comes from the reply's script (`replyLanguage` in `src/lib/sarvam.ts`): Devanagari is Hindi (Marathi if the user spoke Marathi), Latin is English, and so on.
 - Long replies are cut at a sentence end at 1,400 characters.
 

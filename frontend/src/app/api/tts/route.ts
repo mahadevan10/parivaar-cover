@@ -1,6 +1,6 @@
 // Reads an assistant reply aloud with Sarvam AI text-to-speech (Bulbul), so the
 // API key never reaches the browser. Docs: https://docs.sarvam.ai/api-reference-docs/text-to-speech/convert
-import { replyLanguage } from "@/lib/sarvam";
+import { replyLanguage, SARVAM_LANGUAGES } from "@/lib/sarvam";
 
 const SARVAM_URL = "https://api.sarvam.ai/text-to-speech";
 const MAX_CHARS = 1400;
@@ -26,7 +26,10 @@ export async function POST(request: Request) {
 
   const payload: Record<string, string> = {
     text,
-    target_language_code: replyLanguage(text, typeof body?.language === "string" ? body.language : undefined),
+    // `voice` is set when the browser reads a reply in pieces and has already picked one.
+    target_language_code: SARVAM_LANGUAGES.has(body?.voice)
+      ? body.voice
+      : replyLanguage(text, typeof body?.language === "string" ? body.language : undefined),
   };
   if (process.env.SARVAM_TTS_MODEL) payload.model = process.env.SARVAM_TTS_MODEL;
   if (process.env.SARVAM_TTS_SPEAKER) payload.speaker = process.env.SARVAM_TTS_SPEAKER;

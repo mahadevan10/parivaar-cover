@@ -42,6 +42,8 @@ export type ChatRequest = {
   history: ChatTurn[];
   /** Set after a recommendation exists, so follow-up questions are answered from it. */
   recommendationId?: string;
+  /** Language Sarvam detected for a spoken message, e.g. "hi-IN". The reply should use it. */
+  language?: string;
 };
 
 export type ChatResponse = {

@@ -2,12 +2,14 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, branch `fe/talk-mode-verify` (talk mode panel, verify button)._
+_Last updated: 2026-10-31, branch `fe/streamed-speech` (replies read sentence by sentence, language sent to /chat)._
 
 ## Status
 
 - The app runs on live data only. The mock chat, demo data, claim-check fixture and its generator script are gone (#17 already removed "Use the demo family"). The backend must be running; the URL defaults to `http://localhost:8000`.
 - When `/chat` first says the family is complete, the app says "I have all your information" and asks the user to check the board and tap "I have verified all my information" (Family board tab on phones, Hindi if they spoke Hindi). In talk mode it also ends talk mode and says so. The backend's own ready line is dropped so it isn't said twice. The board button is now labelled "I have verified all my information" and glows while ready. Only that button, or "Try again" after an error, starts the search.
+- Replies are read sentence by sentence: the first sentence plays while the rest are made, so speech starts sooner. True streaming over Sarvam WebSockets was left out: the key goes in a header, which browsers can't set on a WebSocket, so it needs a relay server.
+- `/chat` requests carry `language` (Sarvam's detected language) for spoken messages. The backend ignores it until it is wired in; the backend developer has been asked to make the reply follow it. No frontend translation fallback, by choice.
 - Talk mode is a panel in place of the message box (`TalkPanel.tsx`), started from a wave button: live mic bars while listening, dots while thinking, waving amber bars while speaking. Replaces the old switch.
 - Replies are read aloud (Sarvam text-to-speech via `/api/tts`), with a hands-free talk mode and a sticky session language for speech-to-text. Merged in #13.
 - The optimise screen now follows the real request. "Testing combinations" keeps spinning until `/recommend` answers, then the last two checks tick, a "Done" line shows, and the results open. After 6 seconds a "Still working" note appears. Tested in the browser: the demo family takes 3.5 seconds end to end; a family of 8 took about 61 seconds and waited correctly.
