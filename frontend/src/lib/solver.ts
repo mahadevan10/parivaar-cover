@@ -54,6 +54,8 @@ export type SolverOutput = {
   usual_pick: SolverPick | null;
   saving_vs_usual: number | null;
   vs_usual?: { code: string; text: string }[];
+  /** Catches from how the picks stack, most serious first. See shared/README.md. */
+  mix_catches?: { code: string; text: string; members: string[] }[];
   claim_check?: { mix: SolverClaim; usual: SolverClaim };
 };
 
@@ -222,6 +224,7 @@ export function toRecommendation(out: SolverOutput, claimSeries: SolverClaimSeri
     mix,
     saving: out.saving_vs_usual,
     vsUsual: out.vs_usual ?? [],
+    mixCatches: (out.mix_catches ?? []).map((c) => ({ code: c.code, text: c.text, memberIds: c.members })),
     memberCover: out.member_cover,
     claimScenarios: (claimSeries.length ? claimSeries : single).map(toClaimScenario),
   };

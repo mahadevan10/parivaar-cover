@@ -26,7 +26,7 @@ Each policy is one product at one sum insured:
 | `waiting_periods_months` | `initial`, `specific_illness`, `pre_existing` |
 | `condition_waits_months` | Waits for named conditions that differ from `pre_existing` |
 | `sub_limits` | Treatments with a cap, such as `cardiac` and `cataract` |
-| `catches` | Plain-language catches the explainer quotes |
+| `other_catches` | Catches the other fields do not say, like an entry age limit. The solver builds the rest of a pick's `catches` from the fields above (`policy_catches` in `backend/solver.py`), so they always match the numbers |
 
 ## Family input
 
@@ -44,7 +44,7 @@ Conditions use lowercase names: `diabetes`, `hypertension`, `asthma`, `heart_dis
 
 ## Solver output
 
-See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`), `picks` (policy, members, premium, catches, source, reasons), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `vs_usual`, `illustrative`.
+See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`), `picks` (policy, members, premium, catches, source, reasons), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `vs_usual`, `mix_catches`, `illustrative`.
 
 ### Reasons
 
@@ -59,3 +59,19 @@ The solver says why it made each pick, so the explainer only rewords facts and n
 | `next_best` | every pick, last | The solver run again without this pick: what it swaps in, `premium_change`, and per-member `changes` in cover, wait, co-pay and room rent |
 
 `vs_usual` lists the same kind of facts against the usual single floater: the premium saving, each member's cover, and condition waits.
+
+### Mix catches
+
+`mix_catches` lists catches that come from how the picks stack, most serious first. Each has a `code`, `members`, `policy_ids`, the field it comes from (`clause`), the numbers behind it, and a plain `text` sentence.
+
+| Code | Meaning |
+|---|---|
+| `topup_waits_longer` | A member's condition waits longer on the top-up than on the base plan, so for a while only the base plan pays (`base_months`, `topup_months`) |
+| `copay_under_topup` | The base plan has a co-pay, and the top-up does not pay that share (`copay_percent`, `most_paid`) |
+| `topup_on_office_cover` | Office cover counts toward the top-up's deductible, so leaving the job opens a gap below it |
+| `two_insurers` | Base plan and top-up are from different insurers, so a big bill means two claims |
+| `shared_cover` | Members share a top-up, and a floater too when they have one, so one big claim leaves less for the others |
+
+### Summary
+
+`POST /summary` with `{"recommendationId": "..."}` returns `{"why": str, "watch": [str], "source": "llm" or "solver"}`. Sarvam writes it from `vs_usual`, the reasons and `mix_catches`. If Sarvam fails, or its text has an amount or percent the facts do not, the solver's own sentences come back with `source: "solver"`.
