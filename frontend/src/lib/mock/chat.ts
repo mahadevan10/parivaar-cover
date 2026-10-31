@@ -4,7 +4,7 @@
 
 import type { ChatRequest, ChatResponse, FamilyProfile, Member } from "../types";
 import { conditionLabel, cover, rupees } from "../format";
-import { DEMO_FAMILY, DEMO_OUTPUT, DEMO_USUAL, demoPick } from "./demo";
+import { DEMO_OUTPUT, DEMO_USUAL, demoPick } from "./demo";
 import { missingList } from "../family";
 
 type Ask = "members" | "age" | "health" | "city" | "budget" | "office" | "ready" | "explain";
@@ -181,7 +181,7 @@ function question(ask: Ask, family: FamilyProfile): { text: string; quickReplies
     case "members":
       return {
         text: "Who should the plan cover? Tell me each person's name, age and how they're related to you.",
-        quickReplies: ["Use the demo family"],
+        quickReplies: [],
       };
     case "age": {
       const m = family.members.find((x) => x.age === undefined)!;
@@ -286,14 +286,8 @@ export function createMockChat() {
       };
     }
 
-    let family = cloneFamily(req.family);
-    let notes: string[];
-    if (/demo family/i.test(req.message)) {
-      family = cloneFamily(DEMO_FAMILY);
-      notes = ["the Pune demo family"];
-    } else {
-      notes = extract(req.message, family, lastAsk);
-    }
+    const family = cloneFamily(req.family);
+    const notes = extract(req.message, family, lastAsk);
 
     lastAsk = nextAsk(family);
     const q = question(lastAsk, family);

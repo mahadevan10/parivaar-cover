@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, FamilyProfile, Policy, Recommendation, Stage } from "@/lib/types";
 import { getRecommendation, NoFitError, sendChat, usingMock } from "@/lib/api";
 import { missingList } from "@/lib/family";
-import { DEMO_FAMILY } from "@/lib/mock/demo";
 import { cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
 import { ChatPanel } from "./ChatPanel";
@@ -46,7 +45,7 @@ export function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [family, setFamily] = useState<FamilyProfile>(EMPTY_FAMILY);
   const [missing, setMissing] = useState<string[]>(missingList(EMPTY_FAMILY));
-  const [quickReplies, setQuickReplies] = useState<string[]>(["Use the demo family"]);
+  const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
   const [stage, setStage] = useState<Stage>("talk");
   const [rec, setRec] = useState<Recommendation | null>(null);
@@ -120,20 +119,6 @@ export function App() {
       return;
     }
 
-    // The demo family loads in the browser, so the demo never waits on the LLM.
-    if (/demo family/i.test(text) && !rec) {
-      push({ role: "user", text, via: meta.via, language: meta.language });
-      applyFamily(DEMO_FAMILY);
-      setMissing([]);
-      setReady(true);
-      push({
-        role: "assistant",
-        text: "I've loaded the demo family: Rahul, Sneha, Aarav, Mohan and Lata in Pune, with a budget of ₹1,10,000 a year. Check the board, then find your mix.",
-      });
-      setQuickReplies(["Find my mix"]);
-      return;
-    }
-
     const history = messages.map(({ role, text }) => ({ role, text }));
     push({ role: "user", text, via: meta.via, language: meta.language });
     setQuickReplies([]);
@@ -156,9 +141,8 @@ export function App() {
         role: "assistant",
         text: rec
           ? "I can't answer questions right now. The details of each pick are on the right."
-          : "I can't reach the assistant right now. You can fill in the family board on the right, or use the demo family.",
+          : "I can't reach the assistant right now. You can fill in the family board on the right.",
       });
-      if (!rec) setQuickReplies(["Use the demo family"]);
     } finally {
       setLoading(false);
     }
@@ -201,7 +185,6 @@ export function App() {
         busy={loading}
         onChange={editFamily}
         onFindMix={() => send("Find my mix", { via: "text" })}
-        onUseDemo={() => send("Use the demo family", { via: "text" })}
       />
     );
 
