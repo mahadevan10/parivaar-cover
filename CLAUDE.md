@@ -39,9 +39,9 @@ The deck (`stage1_ppt/slide_content.md`, slide 5) planned this stack. For a 6-ho
 | Layer | Planned in the deck | Hackathon build |
 |---|---|---|
 | Frontend | React web, React Native mini-app | Next.js 16 (App Router), TypeScript, Tailwind 4 in `frontend/`. Always calls the FastAPI backend (`NEXT_PUBLIC_API_BASE_URL`, default `http://localhost:8000`). No mock. |
-| Backend / solver | Python + FastAPI, Google OR-Tools | Python 3, FastAPI and OR-Tools CP-SAT in `backend/`. Policies and families are JSON in `shared/`. |
+| Backend / solver | Python + FastAPI, Google OR-Tools | Python 3, FastAPI and OR-Tools CP-SAT in `backend/`. The solver reads policies from SQLite; families are JSON in `shared/`. |
 | AI | Claude Sonnet 5.5; Bhashini / Sarvam for Indian languages | Voice input: Sarvam AI speech-to-text (`saaras:v4`, auto language detect) via `frontend/src/app/api/stt`. LLM: Sarvam `sarvam-105b-conversations` in `backend/llm.py`, for intake and explanations only. |
-| Policy data | PostgreSQL + pgvector, PDF parsing | JSON in `shared/`. Chat turns, each session's family and every recommendation are stored in SQLite (`backend/store.py`, file `backend/parivaar.db`). |
+| Policy data | PostgreSQL + pgvector, PDF parsing | SQLite (`backend/store.py`, file `backend/parivaar.db`). Policies are edited in `shared/policies.json` and loaded into the `policies` table whenever the file changes. Chat turns, each session's family and every recommendation are stored there too. |
 
 ## Repo layout and ownership
 
@@ -76,7 +76,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m unittest test_solver test_app   # tests, Sarvam is stubbed
 ```
 
-Stored data: `sqlite3 backend/parivaar.db` (tables `chat_messages`, `families`, `recommendations`). Set `PARIVAAR_DB` to use another file.
+Stored data: `sqlite3 backend/parivaar.db` (tables `policies`, `chat_messages`, `families`, `recommendations`). Set `PARIVAAR_DB` to use another file.
 
 Endpoints: `POST /recommend` (solver result, reasons and claim checks for years 1 to 4), `POST /chat` (intake, or explanations once `recommendation_id` is set), `GET /health`. Set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` in the frontend to use it.
 

@@ -1,9 +1,12 @@
-"""SQLite storage for chat turns, the family each session builds up, and recommendations.
+"""SQLite storage for policies, chat turns, the family each session builds up, and recommendations.
 
 The database is backend/parivaar.db, or the file named by PARIVAAR_DB. Families are stored as JSON
 after the Pydantic models in app.py have checked them, so they stay in the shared/families.json format.
+Policies are loaded from shared/policies.json, which stays the file to edit. The table is rebuilt
+whenever the file changes, so an edit shows up on the next read without a restart.
 Look at the data with: sqlite3 backend/parivaar.db
 """
+import hashlib
 import json
 import os
 import sqlite3
@@ -42,7 +45,39 @@ CREATE TABLE IF NOT EXISTS recommendations (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS recommendations_alias ON recommendations (alias);
+
+-- Policies, loaded from shared/policies.json. Edit the JSON; the table is rebuilt when it changes.
+-- The columns are for querying; the solver reads the full record in policy.
+CREATE TABLE IF NOT EXISTS policies (
+    id TEXT PRIMARY KEY,
+    position INTEGER NOT NULL,       -- order in policies.json
+    insurer TEXT NOT NULL,
+    product TEXT NOT NULL,
+    plan_type TEXT NOT NULL,         -- floater, individual, senior or super_topup
+    sum_insured INTEGER NOT NULL,
+    deductible INTEGER NOT NULL,
+    entry_age_min INTEGER NOT NULL,
+    entry_age_max INTEGER NOT NULL,
+    max_members INTEGER,
+    copay_percent INTEGER NOT NULL,
+    room_rent_capped INTEGER NOT NULL,
+    initial_wait_months INTEGER NOT NULL,
+    specific_illness_wait_months INTEGER NOT NULL,
+    pre_existing_wait_months INTEGER NOT NULL,
+    diabetes_wait_months INTEGER NOT NULL,  -- condition_waits_months.diabetes, else pre_existing
+    verified INTEGER NOT NULL,
+    source TEXT,
+    policy TEXT NOT NULL             -- the full policy as JSON
+);
+CREATE INDEX IF NOT EXISTS policies_plan_type ON policies (plan_type, sum_insured);
+
+CREATE TABLE IF NOT EXISTS meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
+
+POLICIES_JSON = Path(__file__).resolve().parent.parent / "shared" / "policies.json"
 
 
 def connect():
@@ -96,3 +131,35 @@ def recommendation(rec_id):
         row = conn.execute("SELECT result FROM recommendations WHERE id = ? OR alias = ? ORDER BY created_at DESC, rowid DESC",
                            (rec_id, rec_id)).fetchone()
     return json.loads(row["result"]) if row else None
+
+
+def _policy_row(position, p):
+    waits = p["waiting_periods_months"]
+    return (p["id"], position, p["insurer"], p["product"], p["plan_type"], p["sum_insured"], p["deductible"],
+            p["entry_age"]["min"], p["entry_age"]["max"], p.get("max_members"), p["copay_percent"],
+            int(p["room_rent"]["capped"]), waits["initial"], waits["specific_illness"], waits["pre_existing"],
+            p["condition_waits_months"].get("diabetes", waits["pre_existing"]), int(p["verified"]), p.get("source"),
+            json.dumps(p, ensure_ascii=False))
+
+
+def sync_policies(conn, path=POLICIES_JSON):
+    """Rebuilds the policies table from the JSON file if the file changed since the last load."""
+    raw = Path(path).read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    row = conn.execute("SELECT value FROM meta WHERE key = 'policies_sha256'").fetchone()
+    if row and row["value"] == digest:
+        return
+    rows = [_policy_row(i, p) for i, p in enumerate(json.loads(raw)["policies"])]
+    with conn:
+        conn.execute("DELETE FROM policies")
+        conn.executemany(f"INSERT INTO policies VALUES ({', '.join('?' * 19)})", rows)
+        conn.execute("INSERT INTO meta (key, value) VALUES ('policies_sha256', ?) "
+                     "ON CONFLICT (key) DO UPDATE SET value = excluded.value", (digest,))
+
+
+def policies():
+    """Every policy as a dict in the policies.json format, in file order."""
+    with closing(connect()) as conn:
+        sync_policies(conn)
+        rows = conn.execute("SELECT policy FROM policies ORDER BY position").fetchall()
+    return [json.loads(r["policy"]) for r in rows]
