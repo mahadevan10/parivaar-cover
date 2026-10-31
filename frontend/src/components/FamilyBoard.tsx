@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import type { FamilyProfile, Member } from "@/lib/types";
-import { cover, rupees } from "@/lib/format";
+import { conditionLabel, cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
 import { CheckIcon, MicIcon, PlusIcon, XIcon } from "./icons";
 
-const CONDITION_SUGGESTIONS = ["diabetes", "high BP", "heart condition", "thyroid", "asthma"];
+// Names follow shared/README.md so the solver understands them.
+const CONDITIONS = ["diabetes", "hypertension", "heart_disease", "asthma"];
 
 type Props = {
   family: FamilyProfile;
@@ -143,7 +144,8 @@ function MemberCard({ member, index, flash, onChange, onRemove }: {
   const [draft, setDraft] = useState("");
 
   const addCondition = () => {
-    const c = draft.trim();
+    const typed = draft.trim().toLowerCase();
+    const c = CONDITIONS.find((k) => k === typed || conditionLabel(k) === typed) ?? typed;
     if (c && !member.conditions.includes(c)) onChange({ conditions: [...member.conditions, c] });
     setDraft("");
     setAdding(false);
@@ -196,10 +198,10 @@ function MemberCard({ member, index, flash, onChange, onRemove }: {
         {member.conditions.length === 0 && !adding && <span className="text-xs text-muted">No health conditions noted</span>}
         {member.conditions.map((c) => (
           <span key={c} className="inline-flex items-center gap-1 rounded-full bg-amber-soft px-2.5 py-0.5 text-xs font-medium text-ink">
-            {c}
+            {conditionLabel(c)}
             <button
               type="button"
-              aria-label={`Remove ${c}`}
+              aria-label={`Remove ${conditionLabel(c)}`}
               onClick={() => onChange({ conditions: member.conditions.filter((x) => x !== c) })}
               className="rounded-full hover:text-rose-600"
             >
@@ -219,7 +221,7 @@ function MemberCard({ member, index, flash, onChange, onRemove }: {
               className="w-28 rounded-full border border-line px-2.5 py-0.5 text-xs focus:border-sky focus:outline-none"
             />
             <datalist id="condition-suggestions">
-              {CONDITION_SUGGESTIONS.map((c) => <option key={c} value={c} />)}
+              {CONDITIONS.map((c) => <option key={c} value={conditionLabel(c)} />)}
             </datalist>
           </form>
         ) : (

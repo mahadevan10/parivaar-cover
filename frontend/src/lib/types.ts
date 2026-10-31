@@ -51,31 +51,30 @@ export type ChatResponse = {
   missing: string[];
   quickReplies: string[];
   readyToOptimise: boolean;
-  /** Clause ids the reply relies on. The UI shows them as tappable chips. */
+  /** Policy ids the reply relies on. The UI shows them as tappable fine-print chips. */
   citations?: string[];
 };
 
-export type PolicyKind = "floater" | "individual" | "senior" | "super_top_up";
-
-export type Clause = {
-  id: string;
-  title: string;
-  text: string;
-  source: string;
-};
+export type PolicyKind = "floater" | "individual" | "senior" | "super_topup";
 
 export type Policy = {
   id: string;
-  planName: string;
+  product: string;
   insurer: string;
   kind: PolicyKind;
   memberIds: string[];
   sumInsured: number;
-  deductible?: number;
+  /** 0 except for super top-ups. */
+  deductible: number;
   premium: number;
-  why: string;
+  copayPercent: number;
+  waitsMonths: { initial: number; specificIllness: number; preExisting: number };
   catches: string[];
-  clauseIds: string[];
+  /** Why the solver made this pick, in plain sentences. */
+  reasons: string[];
+  /** What the solver would pick without this one, and what changes. */
+  nextBest?: string;
+  sourceUrl?: string;
 };
 
 export type PlanOption = {
@@ -83,15 +82,14 @@ export type PlanOption = {
   premium: number;
   totalCover: number;
   policies: Policy[];
-  highlights: string[];
 };
 
 export type ClaimOutcome = {
   covered: boolean;
-  paidBy: { policyId: string; amount: number }[];
+  payable: number;
   outOfPocket: number;
-  reason: string;
-  clauseId?: string;
+  coveredFromYear: number;
+  notes: string[];
 };
 
 export type ClaimScenario = {
@@ -99,7 +97,7 @@ export type ClaimScenario = {
   memberId: string;
   label: string;
   amount: number;
-  /** Outcome for each policy year, year 1 first. */
+  /** Solver result for each policy year, year 1 first. */
   byYear: { year: number; usual: ClaimOutcome; mix: ClaimOutcome }[];
 };
 
@@ -109,7 +107,11 @@ export type Recommendation = {
   illustrative: boolean;
   usual: PlanOption;
   mix: PlanOption;
-  clauses: Record<string, Clause>;
+  saving: number;
+  /** Facts comparing the mix with the usual pick, in plain sentences. */
+  vsUsual: { code: string; text: string }[];
+  /** Most each member can claim in a year, from the solver. */
+  memberCover: Record<string, number>;
   claimScenarios: ClaimScenario[];
 };
 

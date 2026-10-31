@@ -2,6 +2,7 @@
 // the mock so the UI can be built and demoed on its own.
 
 import type { ChatRequest, ChatResponse, FamilyProfile, Recommendation } from "./types";
+import { toRecommendation, toSolverFamily, type SolverClaimSeries, type SolverOutput } from "./solver";
 import { createMockChat } from "./mock/chat";
 import { demoRecommendationFor } from "./mock/demo";
 
@@ -25,10 +26,20 @@ export function sendChat(req: ChatRequest): Promise<ChatResponse> {
   return BASE ? post<ChatResponse>("/chat", req) : mockChat(req);
 }
 
+export class NoFitError extends Error {}
+
+/** Runs the solver. The backend returns its own output format, mapped here. */
 export async function getRecommendation(family: FamilyProfile, sessionId: string): Promise<Recommendation> {
-  if (BASE) return post<Recommendation>("/recommend", { sessionId, family });
-  await new Promise((r) => setTimeout(r, 300));
-  return demoRecommendationFor(family);
+  if (!BASE) {
+    await new Promise((r) => setTimeout(r, 300));
+    return demoRecommendationFor(family);
+  }
+  const { solution, claim_checks } = await post<{ solution: SolverOutput; claim_checks?: SolverClaimSeries[] }>(
+    "/recommend",
+    { family: toSolverFamily(family, sessionId) },
+  );
+  if (solution.status !== "ok") throw new NoFitError("No mix fits this budget.");
+  return toRecommendation(solution, claim_checks);
 }
 
 export type Transcript = { transcript: string; languageCode?: string };

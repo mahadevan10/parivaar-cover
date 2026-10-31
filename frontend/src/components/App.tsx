@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatMessage, Clause, FamilyProfile, Recommendation, Stage } from "@/lib/types";
-import { getRecommendation, sendChat, usingMock } from "@/lib/api";
+import type { ChatMessage, FamilyProfile, Policy, Recommendation, Stage } from "@/lib/types";
+import { getRecommendation, NoFitError, sendChat, usingMock } from "@/lib/api";
 import { missingList } from "@/lib/family";
 import { cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
 import { ChatPanel } from "./ChatPanel";
-import { ClauseSheet } from "./ClauseSheet";
 import type { SendMeta } from "./Composer";
 import { FamilyBoard } from "./FamilyBoard";
+import { FinePrintSheet } from "./FinePrintSheet";
 import { JourneySteps } from "./JourneySteps";
 import { Optimising } from "./Optimising";
 import { Results } from "./Results";
@@ -50,7 +50,7 @@ export function App() {
   const [stage, setStage] = useState<Stage>("talk");
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
-  const [openClause, setOpenClause] = useState<string | null>(null);
+  const [openPolicy, setOpenPolicy] = useState<string | null>(null);
   const [changed, setChanged] = useState<Set<string>>(new Set());
   const [mobileView, setMobileView] = useState<"chat" | "board">("chat");
 
@@ -89,9 +89,14 @@ export function App() {
         text: `Here is your mix. ${result.mix.policies.length} policies for ${rupees(result.mix.premium)} a year with ${cover(result.mix.totalCover)} of total cover. The usual pick is one floater at ${rupees(result.usual.premium)} for ${cover(result.usual.totalCover)}. Premiums are illustrative. Ask me about any pick, or try the claim check.`,
       });
       setQuickReplies(["Why not one floater?", "What is a super top-up?", "What are the catches?"]);
-    } catch {
+    } catch (e) {
       setStage("talk");
-      push({ role: "assistant", text: "I couldn't reach the optimiser just now. Please try again." });
+      push({
+        role: "assistant",
+        text: e instanceof NoFitError
+          ? "No mix fits this budget. Try a higher budget, or tell me if anyone already has cover."
+          : "I couldn't reach the optimiser just now. Please try again.",
+      });
       setQuickReplies(["Find my mix"]);
     } finally {
       clearTimeout(toOptimise);
@@ -143,12 +148,15 @@ export function App() {
     setQuickReplies(ready ? ["Find my mix"] : []);
   };
 
-  const clauses: Record<string, Clause> = rec?.clauses ?? {};
+  const policies: Record<string, Policy> = Object.fromEntries(
+    [...(rec?.mix.policies ?? []), ...(rec?.usual.policies ?? [])].map((p) => [p.id, p]),
+  );
+  const policyNames = Object.fromEntries(Object.values(policies).map((p) => [p.id, p.product]));
   const canvas =
     stage === "fine_print" || stage === "optimise" ? (
       <Optimising memberCount={family.members.length} />
     ) : rec && stage === "explain" ? (
-      <Results rec={rec} family={family} onOpenClause={setOpenClause} onEditFamily={backToFamily} />
+      <Results rec={rec} family={family} onOpenPolicy={setOpenPolicy} onEditFamily={backToFamily} />
     ) : (
       <FamilyBoard
         family={family}
@@ -206,10 +214,10 @@ export function App() {
             messages={messages}
             loading={loading}
             quickReplies={quickReplies}
-            clauses={clauses}
+            policyNames={policyNames}
             placeholder={rec ? "Ask about any pick or catch" : "Type, or tap the mic to speak"}
             onSend={send}
-            onOpenClause={setOpenClause}
+            onOpenPolicy={setOpenPolicy}
           />
         </aside>
         <div className={`min-h-0 min-w-0 overflow-y-auto ${mobileView === "board" ? "block" : "hidden"} lg:block`}>
@@ -217,7 +225,7 @@ export function App() {
         </div>
       </main>
 
-      <ClauseSheet clause={openClause ? clauses[openClause] ?? null : null} onClose={() => setOpenClause(null)} />
+      <FinePrintSheet policy={openPolicy ? policies[openPolicy] ?? null : null} onClose={() => setOpenPolicy(null)} />
     </div>
   );
 }

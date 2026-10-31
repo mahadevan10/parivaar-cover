@@ -1,8 +1,42 @@
-# API contract (proposal from frontend)
+# API contract (frontend view)
 
-Status: **proposal, not yet agreed with backend.** Once agreed, move it to `shared/` and keep `src/lib/types.ts` in sync.
+Status: **the frontend now uses the backend's own formats from `shared/README.md`.** Only the HTTP wrapping below is new and needs the backend developer's agreement. Once agreed, move it to `shared/`.
 
-The frontend calls the backend at `NEXT_PUBLIC_API_BASE_URL`. With it unset, the UI uses its built-in mock, which follows this same contract. JSON keys are camelCase. Money is whole rupees as numbers.
+All solver data stays in the backend's snake_case. `src/lib/solver.ts` is the only frontend file that maps it to UI types.
+
+## POST /recommend
+
+Request:
+
+```json
+{ "family": SolverFamily }
+```
+
+`SolverFamily` is the family input format from `shared/README.md` (`id`, `city`, `budget`, `members[]`, `office_cover[]`). Conditions use `diabetes`, `hypertension`, `asthma`, `heart_disease`. Relation for a wife or husband is sent as `spouse`. Member ids come from the frontend and must be echoed back unchanged.
+
+Response:
+
+```json
+{
+  "solution": SolverOutput,
+  "claim_checks": [ClaimSeries]
+}
+```
+
+- `solution` is exactly what `solve()` returns (see `shared/examples/demo_solver_output.json`). `status: "no_fit"` shows a "no mix fits this budget" message.
+- `claim_checks` is optional. Each entry runs `claim_check()` for policy years 1 to 4, for the mix and the usual pick:
+
+```json
+{
+  "id": "mohan-heart",
+  "member_id": "mohan",
+  "label": "Heart procedure",
+  "amount": 600000,
+  "by_year": [{ "policy_year": 1, "mix": ClaimResult, "usual": ClaimResult }]
+}
+```
+
+`frontend/scripts/gen_claim_checks.py` builds exactly this from the backend's `claim_check()`, and can be copied for the endpoint. If `claim_checks` is missing, the UI falls back to `solution.claim_check` as a single year.
 
 ## POST /chat
 
@@ -14,9 +48,9 @@ Request:
 {
   "sessionId": "uuid",
   "message": "My father Mohan is 64 and diabetic",
-  "family": { "...FamilyProfile, as the user currently sees and edits it" },
+  "family": FamilyProfile,
   "history": [{ "role": "assistant", "text": "..." }, { "role": "user", "text": "..." }],
-  "recommendationId": "only after /recommend, so questions get answered from that result"
+  "recommendationId": "set after /recommend, so follow-up questions are answered from that result"
 }
 ```
 
@@ -25,25 +59,19 @@ Response:
 ```json
 {
   "reply": "Noted: Mohan, 64, diabetes. Does anyone else have a health condition?",
-  "family": { "...updated FamilyProfile" },
+  "family": FamilyProfile,
   "missing": ["City", "Yearly budget"],
   "quickReplies": ["No one else"],
   "readyToOptimise": false,
-  "citations": ["c-ped-senior"]
+  "citations": ["star-red-carpet-10l"]
 }
 ```
 
-- The user can edit the family board directly, so always treat the `family` in the request as the latest truth and return a full updated copy.
-- Keep each member's `id` stable across turns. The board animates by id.
-- `citations` are clause ids from the current recommendation. The UI turns them into tappable chips.
-
-### FamilyProfile
+`FamilyProfile` is the UI's working copy of the family (camelCase, see `src/lib/types.ts`):
 
 ```json
 {
-  "members": [
-    { "id": "mohan", "name": "Mohan", "relation": "father", "age": 64, "conditions": ["diabetes"], "heardFrom": "my father Mohan is 64 and diabetic" }
-  ],
+  "members": [{ "id": "mohan", "name": "Mohan", "relation": "father", "age": 64, "conditions": ["diabetes"], "heardFrom": "my father Mohan is 64 and diabetic" }],
   "city": "Pune",
   "budget": 110000,
   "officeCover": { "amount": 500000, "memberIds": ["rahul"] },
@@ -52,32 +80,10 @@ Response:
 }
 ```
 
-`heardFrom` is the phrase the details came from. The board shows it so the user can spot a mishearing.
+- The user can edit the board directly, so treat the request's `family` as the latest truth and return a full updated copy. Keep member ids stable.
+- `heardFrom` is the phrase the details came from. Optional.
+- `citations` are `policy_id`s from the current solution. The UI turns them into "fine print" chips.
 
-## POST /recommend
-
-Request: `{ "sessionId": "uuid", "family": FamilyProfile }`
-
-Response: `Recommendation`. See `src/lib/mock/demo.ts` for a full example with the deck's demo family.
-
-```json
-{
-  "id": "rec-123",
-  "illustrative": true,
-  "usual": PlanOption,
-  "mix": PlanOption,
-  "clauses": { "c-ped-senior": { "id", "title", "text", "source" } },
-  "claimScenarios": [ClaimScenario]
-}
-```
-
-- `PlanOption`: `label`, `premium`, `totalCover`, `highlights[]`, `policies[]`.
-- `Policy`: `id`, `planName`, `insurer`, `kind` (`floater` | `individual` | `senior` | `super_top_up`), `memberIds[]`, `sumInsured`, `deductible?`, `premium`, `why`, `catches[]`, `clauseIds[]`.
-- `ClaimScenario`: `id`, `memberId`, `label`, `amount`, `byYear[]` where each entry is `{ year, usual: ClaimOutcome, mix: ClaimOutcome }`. The UI has a year slider, so send years 1 to 4.
-- `ClaimOutcome`: `covered`, `paidBy[{ policyId, amount }]`, `outOfPocket`, `reason`, `clauseId?`.
-
-The claim simulator lives in the backend. The UI only displays its results.
-
-## Needs CORS
+## CORS
 
 Allow `http://localhost:3000` during development.

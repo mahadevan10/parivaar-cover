@@ -54,3 +54,13 @@ const AVATAR_COLORS = [
 export function avatarColor(index: number): string {
   return AVATAR_COLORS[index % AVATAR_COLORS.length];
 }
+
+// Condition names follow shared/README.md. These are the words shown to users.
+const CONDITION_LABELS: Record<string, string> = {
+  hypertension: "high BP",
+  heart_disease: "heart disease",
+};
+
+export function conditionLabel(c: string): string {
+  return CONDITION_LABELS[c] ?? c.replace(/_/g, " ");
+}
