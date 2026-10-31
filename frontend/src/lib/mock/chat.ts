@@ -3,8 +3,8 @@
 // The real extraction and replies come from the backend LLM.
 
 import type { ChatRequest, ChatResponse, FamilyProfile, Member } from "../types";
-import { cover, rupees } from "../format";
-import { DEMO_FAMILY, DEMO_RECOMMENDATION } from "./demo";
+import { conditionLabel, cover, rupees } from "../format";
+import { DEMO_FAMILY, DEMO_OUTPUT, demoPick } from "./demo";
 import { missingList } from "../family";
 
 type Ask = "members" | "age" | "health" | "city" | "budget" | "office" | "ready" | "explain";
@@ -23,8 +23,8 @@ const RELATIONS: [RegExp, string][] = [
 
 const CONDITIONS: [RegExp, string][] = [
   [/diabet|\bsugar\b|शुगर|मधुमेह/i, "diabetes"],
-  [/\bbp\b|blood pressure|hypertension|बीपी/i, "high BP"],
-  [/heart|cardiac|दिल/i, "heart condition"],
+  [/\bbp\b|blood pressure|hypertension|बीपी/i, "hypertension"],
+  [/heart|cardiac|दिल/i, "heart_disease"],
   [/thyroid/i, "thyroid"],
   [/asthma/i, "asthma"],
 ];
@@ -160,7 +160,7 @@ export function extract(message: string, family: FamilyProfile, lastAsk: Ask): s
   }
 
   for (const m of heard.keys()) {
-    const bits = [m.name, m.age !== undefined ? `${m.age}` : null, ...m.conditions].filter(Boolean);
+    const bits = [m.name, m.age !== undefined ? `${m.age}` : null, ...m.conditions.map(conditionLabel)].filter(Boolean);
     notes.push(bits.join(", "));
   }
   return notes;
@@ -219,44 +219,50 @@ function question(ask: Ask, family: FamilyProfile): { text: string; quickReplies
 }
 
 function explain(message: string): Pick<ChatResponse, "reply" | "citations"> {
-  const r = DEMO_RECOMMENDATION;
+  const o = DEMO_OUTPUT;
+  const usual = o.usual_pick.policy_id;
+  const senior = demoPick("Senior Citizens Red Carpet");
+  const floater = demoPick("Young Star Gold");
+  const lata = demoPick("Health Infinity");
+  const topUps = o.picks.filter((p) => p.plan_type === "super_topup").map((p) => p.policy_id);
   const q = message.toLowerCase();
+
   if (/one floater|single|usual|why not/.test(q)) {
     return {
-      reply: `One ₹25L floater puts all five people on one shared limit. It also makes Mohan wait 3 years for diabetes cover. The mix gives the parents their own plans, so Mohan waits 1 year, and the family gets ${cover(r.mix.totalCover)} of cover.`,
-      citations: ["c-floater-usual", "c-ped-usual", "c-ped-senior"],
+      reply: `One ${cover(o.usual_pick.sum_insured)} floater puts all five people on one shared limit, and Mohan waits 3 years for diabetes cover. The mix gives the parents their own plans. Mohan's diabetes is covered from year 2, and the family gets ${cover(o.total_cover)} of cover.`,
+      citations: [usual, senior.policy_id],
     };
   }
   if (/top.?up|deductible/.test(q)) {
     return {
-      reply: "A super top-up pays only after the year's hospital bills cross ₹10L. Your base plans cover the first ₹10L, so the top-up is cheap and still gives you room for a very large claim.",
-      citations: ["c-topup-deductible"],
+      reply: "A super top-up pays only after the year's hospital bills cross ₹10 lakh. The base plans cover the first ₹10 lakh, so the top-ups are cheap and still leave room for a very large claim.",
+      citations: topUps,
     };
   }
   if (/catch|downside|problem|risk/.test(q)) {
     return {
-      reply: "Three catches to know. The young family's ₹10L is shared by all three. Mohan's room rent is capped at ₹10,000 a day. Lata waits 2 years for knee or cataract surgery.",
-      citations: ["c-floater-shared", "c-room-senior", "c-specific-wait"],
+      reply: "The big ones. Mohan pays 30% of every claim on his senior plan, and his room rent is capped. The young family's ₹10 lakh is shared by all three. The top-ups pay only after ₹10 lakh of bills.",
+      citations: [senior.policy_id, floater.policy_id, ...topUps],
     };
   }
-  if (/diabet|wait|mohan/.test(q)) {
+  if (/diabet|wait|mohan|co.?pay/.test(q)) {
     return {
-      reply: "Mohan's senior plan covers his diabetes after 1 year. On the usual floater he would wait 3 years. Move the year slider in the claim check to see the difference.",
-      citations: ["c-ped-senior", "c-ped-usual"],
+      reply: "Mohan's senior plan covers his diabetes after 1 year, with a 30% co-pay. On the usual floater he waits 3 years. Try the claim check: a ₹6 lakh heart procedure in year 2 costs him ₹1,80,000 with the mix and the full ₹6 lakh with the usual pick.",
+      citations: [senior.policy_id, usual],
     };
   }
   if (/room/.test(q)) {
-    return { reply: "Mohan's senior plan pays room rent up to ₹10,000 a day. A costlier room cuts the payout on related charges too.", citations: ["c-room-senior"] };
+    return { reply: "Mohan's senior plan caps room rent at 1% of the cover, at most ₹4,000 a day.", citations: [senior.policy_id] };
   }
   if (/lata|knee|cataract/.test(q)) {
     return {
-      reply: "Lata has no health conditions, so a standard individual plan costs less than a senior plan. Knee and cataract surgery are covered after 2 years.",
-      citations: ["c-specific-wait"],
+      reply: "Lata has no health conditions, so a regular individual plan costs less than a senior plan and has no co-pay. Cataract and some listed illnesses are covered after 2 years.",
+      citations: [lata.policy_id],
     };
   }
   if (/cost|price|premium|cheap|save/.test(q)) {
     return {
-      reply: `The mix costs ${rupees(r.mix.premium)} a year, against ${rupees(r.usual.premium)} for the usual pick. These premiums are illustrative.`,
+      reply: `The mix costs ${rupees(o.total_premium)} a year, against ${rupees(o.usual_pick.premium)} for the usual pick. These premiums are illustrative.`,
     };
   }
   return {

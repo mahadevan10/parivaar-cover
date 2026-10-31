@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { ChatMessage, Clause } from "@/lib/types";
+import type { ChatMessage } from "@/lib/types";
 import { languageName } from "@/lib/format";
 import { Composer, type SendMeta } from "./Composer";
 import { DocIcon, MicIcon, ShieldIcon } from "./icons";
@@ -10,13 +10,13 @@ type Props = {
   messages: ChatMessage[];
   loading: boolean;
   quickReplies: string[];
-  clauses: Record<string, Clause>;
+  policyNames: Record<string, string>;
   placeholder: string;
   onSend: (text: string, meta: SendMeta) => void;
-  onOpenClause: (id: string) => void;
+  onOpenPolicy: (id: string) => void;
 };
 
-export function ChatPanel({ messages, loading, quickReplies, clauses, placeholder, onSend, onOpenClause }: Props) {
+export function ChatPanel({ messages, loading, quickReplies, policyNames, placeholder, onSend, onOpenPolicy }: Props) {
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -26,7 +26,7 @@ export function ChatPanel({ messages, loading, quickReplies, clauses, placeholde
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex-1 space-y-3 overflow-y-auto px-3 py-4 sm:px-4" role="log" aria-live="polite" aria-label="Conversation">
         {messages.map((m) => (
-          <Bubble key={m.id} message={m} clauses={clauses} onOpenClause={onOpenClause} />
+          <Bubble key={m.id} message={m} policyNames={policyNames} onOpenPolicy={onOpenPolicy} />
         ))}
         {loading && (
           <div className="flex items-center gap-2 pl-10 text-muted" aria-label="Assistant is typing">
@@ -58,10 +58,10 @@ export function ChatPanel({ messages, loading, quickReplies, clauses, placeholde
   );
 }
 
-function Bubble({ message, clauses, onOpenClause }: {
+function Bubble({ message, policyNames, onOpenPolicy }: {
   message: ChatMessage;
-  clauses: Record<string, Clause>;
-  onOpenClause: (id: string) => void;
+  policyNames: Record<string, string>;
+  onOpenPolicy: (id: string) => void;
 }) {
   if (message.role === "user") {
     const lang = languageName(message.language);
@@ -94,11 +94,11 @@ function Bubble({ message, clauses, onOpenClause }: {
               <button
                 key={id}
                 type="button"
-                onClick={() => onOpenClause(id)}
+                onClick={() => onOpenPolicy(id)}
                 className="inline-flex items-center gap-1 rounded-full bg-navy-soft px-2.5 py-1 text-xs text-navy hover:bg-sky-soft"
               >
                 <DocIcon className="h-3.5 w-3.5" />
-                {clauses[id]?.title ?? "Policy clause"}
+                {policyNames[id] ? `${policyNames[id]}: fine print` : "Fine print"}
               </button>
             ))}
           </div>

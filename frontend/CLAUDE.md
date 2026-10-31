@@ -20,7 +20,10 @@ Chat and voice UI for Parivaar Cover. Read the root `CLAUDE.md` first, then `CON
 | `src/components/ChatPanel.tsx`, `Composer.tsx` | Chat thread, quick replies, mic and transcript check |
 | `src/components/FamilyBoard.tsx` | Live family board that fills as the user talks, editable |
 | `src/components/Results.tsx` | Compare, cover map, claim check, policy cards |
+| `src/components/FinePrintSheet.tsx` | Fine print for one policy |
 | `src/app/api/stt/route.ts` | Sarvam speech-to-text proxy (keeps the key server side) |
 | `src/lib/api.ts` | Backend client, falls back to the mock |
 | `src/lib/types.ts` | Request and response shapes (mirror of `docs/api-contract.md`) |
-| `src/lib/mock/` | Demo family, demo recommendation, mock chat |
+| `src/lib/solver.ts` | Backend formats and the mapping to UI types |
+| `src/lib/mock/` | Demo data read from `shared/`, claim-check fixture, mock chat |
+| `scripts/gen_claim_checks.py` | Rebuilds the claim-check fixture from the backend's `claim_check()` |
