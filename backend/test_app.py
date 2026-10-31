@@ -66,7 +66,7 @@ class Intake(unittest.TestCase):
         self.assertEqual((mohan["id"], mohan["age"], mohan["conditions"]), ("mohan", 64, ["diabetes", "hypertension"]))
         self.assertIsNone(lata["age"])
         self.assertEqual(body["family"]["budget"], 110000)
-        self.assertEqual(body["missing"], ["Lata's age", "Office cover", "City"])
+        self.assertEqual(body["missing"], ["Lata's age", "Office cover", "City", "Cover you want"])
         self.assertEqual(body["reply"], "Noted. Which city do you live in?")  # the LLM asked, so no second question
         self.assertFalse(body["readyToOptimise"])
         self.assertEqual(mohan["heardFrom"], "My father Mohan is 64, diabetic and has high BP. Mother Lata.")
@@ -120,7 +120,7 @@ class Intake(unittest.TestCase):
     def test_ready_when_nothing_is_missing(self):
         llm_family = dict(copy.deepcopy(DEMO), health_checked=True, office_checked=True)
         family = {"members": copy.deepcopy(DEMO["members"]), "city": "Pune", "budget": 110000,
-                  "healthChecked": True, "officeChecked": True}
+                  "healthChecked": True, "officeChecked": True, "coverTarget": 10000000, "coverChecked": True}
         with mock.patch.object(app.llm, "ask_json", return_value={"reply": "Ready.", "family": llm_family}):
             body = client.post("/chat", json={"sessionId": "s1", "message": "That is all", "family": family}).json()
         self.assertTrue(body["readyToOptimise"])
@@ -130,6 +130,57 @@ class Intake(unittest.TestCase):
     def test_sarvam_failure_is_a_502(self):
         with mock.patch.object(app.llm, "ask_json", side_effect=RuntimeError("down")):
             self.assertEqual(client.post("/chat", json={"message": "hi"}).status_code, 502)
+
+
+class CoverTarget(unittest.TestCase):
+    def ask(self, message, llm_family, family=None):
+        with mock.patch.object(app.llm, "ask_json", return_value={"reply": "Noted.", "family": llm_family}):
+            return client.post("/chat", json={"message": message, "family": family or {}}).json()
+
+    def ready_family(self, **extra):
+        return dict({"members": copy.deepcopy(DEMO["members"]), "city": "Pune", "budget": 110000,
+                     "healthChecked": True, "officeChecked": True}, **extra)
+
+    def test_asks_for_cover_after_the_budget(self):
+        llm_family = dict(copy.deepcopy(DEMO), health_checked=True, office_checked=True)
+        llm_family.pop("cover_target", None)
+        body = self.ask("The budget is 1.1 lakh", llm_family, self.ready_family())
+        self.assertEqual(body["missing"], ["Cover you want"])
+        self.assertEqual(body["quickReplies"], ["Not sure"])
+        self.assertIn("How much total cover would you like for the family?", body["reply"])
+        self.assertFalse(body["readyToOptimise"])
+
+    def test_stores_the_cover_amount(self):
+        llm_family = dict(copy.deepcopy(DEMO), health_checked=True, office_checked=True, cover_target="1,00,00,000")
+        body = self.ask("1 crore", llm_family, self.ready_family())
+        self.assertEqual((body["family"]["coverTarget"], body["family"]["coverChecked"]), (10000000, True))
+        self.assertTrue(body["readyToOptimise"])
+
+    def test_keeps_the_cover_amount_when_the_llm_leaves_it_out(self):
+        llm_family = dict(copy.deepcopy(DEMO), health_checked=True, office_checked=True)
+        llm_family.pop("cover_target", None)
+        body = self.ask("Thanks", llm_family, self.ready_family(coverTarget=5000000, coverChecked=True))
+        self.assertEqual(body["family"]["coverTarget"], 5000000)
+
+    def test_not_sure_lets_the_solver_choose(self):
+        llm_family = dict(copy.deepcopy(DEMO), health_checked=True, office_checked=True)
+        llm_family.pop("cover_target", None)
+        body = self.ask("Not sure", llm_family, self.ready_family())
+        self.assertEqual((body["family"]["coverTarget"], body["family"]["coverChecked"]), (None, True))
+        self.assertTrue(body["readyToOptimise"])
+
+    def test_recommend_says_when_the_budget_keeps_cover_short(self):
+        body = client.post("/recommend", json={"family": dict(DEMO, budget=42000, cover_target=10000000)}).json()
+        check = body["solution"]["cover_check"]
+        self.assertEqual(check["code"], "cover_short")
+        self.assertLessEqual(body["solution"]["total_premium"], 42000)
+        self.assertGreater(check["budget_needed"], 42000)
+        # The results show this sentence as written, so the summary is not asked to restate it
+        self.assertNotIn(check["text"], json.dumps(app.summary_facts(body["solution"], DEMO), ensure_ascii=False))
+
+    def test_recommend_without_a_target_has_no_cover_check(self):
+        family = {k: v for k, v in DEMO.items() if k != "cover_target"}
+        self.assertIsNone(client.post("/recommend", json={"family": family}).json()["solution"]["cover_check"])
 
 
 class QuickReplies(unittest.TestCase):
@@ -222,7 +273,7 @@ class Storage(unittest.TestCase):
         saved = store.family("store-1")
         mohan = saved["family"]["members"][0]
         self.assertEqual((saved["family"]["id"], mohan["age"], mohan["conditions"]), ("store-1", 64, ["diabetes"]))
-        self.assertEqual((saved["missing"], saved["ready"]), (["Office cover", "City", "Yearly budget"], False))
+        self.assertEqual((saved["missing"], saved["ready"]), (["Office cover", "City", "Yearly budget", "Cover you want"], False))
 
     def test_keeps_only_the_latest_family(self):
         for age in (60, 61):

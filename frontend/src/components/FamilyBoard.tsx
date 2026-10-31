@@ -72,9 +72,14 @@ export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange
         </ul>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <Fact label="City" value={family.city} flash={changedIds.has("city")} />
         <Fact label="Yearly budget" value={family.budget ? rupees(family.budget) : undefined} flash={changedIds.has("budget")} />
+        <Fact
+          label="Cover you want"
+          value={family.coverTarget ? cover(family.coverTarget) : family.coverChecked ? "Not sure" : undefined}
+          flash={changedIds.has("cover")}
+        />
         <Fact
           label="Office cover"
           value={family.officeCover ? cover(family.officeCover.amount) : family.officeChecked ? "None" : undefined}
@@ -130,7 +135,7 @@ function EmptyBoard() {
       <div className="max-w-sm">
         <p className="font-medium text-ink">Tell me about your family, by voice or text.</p>
         <p className="mt-1 text-sm text-muted">
-          Names, ages, health conditions, city and budget. Each person appears here as you mention them.
+          Names, ages, health conditions, city, budget and the cover you want. Each person appears here as you mention them.
         </p>
       </div>
     </div>

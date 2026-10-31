@@ -2,11 +2,12 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, on `main` (all frontend work merged, last PRs #22 and #23)._
+_Last updated: 2026-10-31, on `be/cover-target` (intake asks for the cover the family wants; results say when the budget keeps cover short)._
 
 ## Status
 
-- All frontend work is on `main`. No open frontend branches.
+- All frontend work is on `main` except `be/cover-target`, described in the next line.
+- Cover you want: intake asks "How much total cover would you like for the family?" after the budget, with a "Not sure" quick reply. `FamilyProfile` has `coverTarget` and `coverChecked`, and "Cover you want" stays in `missing` until it is answered. The board shows it as a fourth fact. `/recommend` gets `cover_target` and returns `cover_check` (`rec.coverCheck`). If the cover is met, the mix card shows a "You asked for ₹1 crore" chip. If the budget can't buy it, an amber banner above the summary shows the solver's sentence with the budget needed, and the "Here is your mix" message adds that sentence. Tested with curl against the live backend, and type check and lint pass. Not clicked through in the browser yet.
 - Live data only. The app always calls the backend (default `http://localhost:8000`). The mock, demo data and claim-check fixture are gone.
 - The repo-root `.env` now holds `SARVAM_API_KEY` on this machine. Without it `/chat` returned 502 and the app said "I can't reach the assistant".
 - Board: member cards show short notes on what matters for each person (age band, conditions and their waiting periods, office cover, a missing age in amber). The "heard from" quote is gone.
@@ -51,16 +52,20 @@ _Last updated: 2026-10-31, on `main` (all frontend work merged, last PRs #22 and
 | Summary text comes from Sarvam via `/summary`, never written in the UI | Keeps the core rule: the backend checks every amount, percent and name against the solver's facts and falls back to the solver's sentences. |
 | Fetch the summary separately, after the results show | The results never wait on the LLM. |
 | Condition names follow `shared/README.md` (`hypertension`, `heart_disease`); the UI shows friendly labels | The solver matches conditions by name. |
+| The cover amount is a minimum, but the budget comes first | Agreed with the user. When the budget can't buy it, show the most cover it can buy and the budget the asked cover needs. |
+| The cover gap shows as written in a banner, and the summary LLM never gets it | In testing, Sarvam restated it with the premium as the budget. |
 
 ## Next
 
-1. Full browser run with the live backend: talk mode in Hindi and English, the verify message and button, member notes, summary box and mix catches, on desktop and phone widths.
+1. Full browser run with the live backend: talk mode in Hindi and English, the verify message and button, member notes, summary box and mix catches, the cover question, the "You asked for" chip and the shortfall banner (demo family with ₹1 crore, then a ₹42,000 budget), on desktop and phone widths.
 2. Once the backend uses `language`, check that talk mode replies and their voice follow the user's language.
 3. Rewrite the demo script for real numbers: Mohan's year 2 heart claim is partly covered (₹1,80,000 co-pay).
 4. Demo polish: phone layout.
 
 ## Open questions
 
+- Total cover adds up every policy, so separate policies per person count more than one shared floater. The solver can reach ₹1 crore at ₹50,000 with one top-up per person. Should the target count each person's cover (`member_cover`) instead? That's the backend's call, and it needs agreement on `shared/`.
+- The cover board fact can't be edited by hand. To change the amount, the user says it in the chat.
 - The untracked `.history/` folder (editor local history) should go in the root `.gitignore`. That file is shared, so agree it with the backend developer.
 - Sister and brother relations: does the solver accept them?
 - Unknown health conditions: suggested the backend treats them as a general pre-existing condition. Backend's call.
