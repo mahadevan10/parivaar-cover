@@ -1016,8 +1016,11 @@ def grounded(family, previous, history):
             m["age"] = old.get("age")
         m["conditions"] = [c for c in m["conditions"] if c in old.get("conditions", [])
                            or heard(m, CONDITION_NAMES.get(c, [c.replace("_", " ")]))]
-    if family["office_checked"] and not previous.get("office_checked") and not any(
-            has_word(t["content"].lower(), w) for t in history if t["role"] == "user" for w in OFFICE_WORDS):
+    # A user turn counts as talking about office cover if it says so, or answers the assistant's office question.
+    office_said = any(
+        t["role"] == "user" and any(has_word((asked + " " + t["content"]).lower(), w) for w in OFFICE_WORDS)
+        for asked, t in zip([""] + [p["content"] if p["role"] != "user" else "" for p in history], history))
+    if family["office_checked"] and not previous.get("office_checked") and not office_said:
         family["office_checked"], family["office_cover"] = False, []
     return family
 
