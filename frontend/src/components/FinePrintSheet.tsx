@@ -74,6 +74,14 @@ export function FinePrintSheet({ policy, onClose }: { policy: Policy | null; onC
 
           <p className="mt-4 text-xs text-muted">
             From the insurer&apos;s public brochure. Not yet checked against the policy wording.
+            {policy.sourceUrl && (
+              <>
+                {" "}
+                <a href={policy.sourceUrl} target="_blank" rel="noreferrer" className="font-medium text-sky hover:underline">
+                  Insurer page
+                </a>
+              </>
+            )}
           </p>
         </div>
       )}

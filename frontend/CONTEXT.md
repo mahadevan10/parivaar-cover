@@ -8,6 +8,7 @@ _Last updated: 2026-10-31, branch `fe/solver-adapter`._
 
 - Chat and voice UI is on `main` (PR #2).
 - The frontend now reads the backend's real data: `shared/families.json` for the demo family and `shared/examples/demo_solver_output.json` for the result. Real products (Star Health, ManipalCigna, Reliance), catches, co-pays and waits show on screen.
+- Policy cards show the solver's own `reasons` ("why this pick") and its `next_best` option. The compare block shows `vs_usual` facts. Nothing is invented in the UI.
 - Claim check year 1 to 4 comes from the backend's `claim_check()`, saved in `src/lib/mock/claim_checks.json` by `scripts/gen_claim_checks.py`.
 - Mohan's year 2 heart claim now shows as partly covered: the mix pays ₹4,20,000 and he pays ₹1,80,000 (30% co-pay). The usual pick pays nothing until year 4.
 - `/api/stt` reaches Sarvam and handles errors. Not yet tested with the real key.
@@ -27,6 +28,7 @@ _Last updated: 2026-10-31, branch `fe/solver-adapter`._
 | Contract proposal in `docs/api-contract.md` | `shared/` needs agreement from both developers. |
 | Use the backend's snake_case solver output as is; map it only in `src/lib/solver.ts` | No extra work for the backend, one place to change if the format moves. |
 | Import `shared/` JSON directly (`@shared/*` alias, Turbopack root set to the repo) | Demo uses real solver data and stays in sync with backend changes. |
+| Show solver `reasons`, `next_best` and `vs_usual` text as is | The solver states the facts; the UI and LLM only present them, which keeps the core rule. |
 | Policy citations open a "fine print" sheet built from the pick's own fields | The data has no clause text yet. Every sheet says it is from public brochures and not yet checked against the wording. |
 | Condition names follow `shared/README.md` (`hypertension`, `heart_disease`); the UI shows friendly labels | The solver matches conditions by name. |
 

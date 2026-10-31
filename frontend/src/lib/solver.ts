@@ -23,6 +23,9 @@ export type SolverPick = {
   copay_percent: number;
   waiting_periods_months: { initial: number; specific_illness: number; pre_existing: number };
   catches: string[];
+  source?: string;
+  /** Each reason has a code, the numbers behind it, and a plain sentence. See shared/README.md. */
+  reasons?: { code: string; text: string }[];
 };
 
 export type SolverClaim = {
@@ -47,6 +50,7 @@ export type SolverOutput = {
   member_cover: Record<string, number>;
   usual_pick: SolverPick;
   saving_vs_usual: number;
+  vs_usual?: { code: string; text: string }[];
   claim_check?: { mix: SolverClaim; usual: SolverClaim };
 };
 
@@ -108,6 +112,9 @@ function toPolicy(p: SolverPick): Policy {
       preExisting: p.waiting_periods_months.pre_existing,
     },
     catches: p.catches,
+    reasons: (p.reasons ?? []).filter((r) => r.code !== "next_best").map((r) => r.text),
+    nextBest: p.reasons?.find((r) => r.code === "next_best")?.text,
+    sourceUrl: p.source,
   };
 }
 
@@ -162,6 +169,7 @@ export function toRecommendation(out: SolverOutput, claimSeries: SolverClaimSeri
     usual,
     mix,
     saving: out.saving_vs_usual,
+    vsUsual: out.vs_usual ?? [],
     memberCover: out.member_cover,
     claimScenarios: (claimSeries.length ? claimSeries : single).map(toClaimScenario),
   };

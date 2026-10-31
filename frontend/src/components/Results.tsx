@@ -76,6 +76,7 @@ function Compare({ rec, family }: { rec: Recommendation; family: FamilyProfile }
   const times = mix.totalCover / usual.totalCover;
   const usualPolicy = usual.policies[0];
   const mixCopays = mix.policies.filter((p) => p.copayPercent > 0);
+  const facts = rec.vsUsual.filter((f) => f.code !== "member_cover");
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -97,7 +98,7 @@ function Compare({ rec, family }: { rec: Recommendation; family: FamilyProfile }
           {rec.saving > 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">{rupees(rec.saving)} less a year</span>}
           {times > 1 && <span className="rounded-full bg-sky-soft px-2 py-0.5 font-medium text-navy">{Number(times.toFixed(1))}x the cover</span>}
           <span className="rounded-full bg-canvas px-2 py-0.5 text-ink">{mix.policies.length} policies</span>
-          {conditionWaits(mix.policies, family).map((w) => (
+          {!facts.some((f) => f.code === "condition_wait") && conditionWaits(mix.policies, family).map((w) => (
             <span key={w} className="rounded-full bg-canvas px-2 py-0.5 text-ink">{w}</span>
           ))}
           {mixCopays.map((p) => (
@@ -107,6 +108,16 @@ function Compare({ rec, family }: { rec: Recommendation; family: FamilyProfile }
           ))}
         </div>
       </div>
+      {facts.length > 0 && (
+        <ul className="space-y-1 rounded-2xl bg-sky-soft/60 px-4 py-3 text-sm text-ink sm:col-span-2">
+          {facts.map((f) => (
+            <li key={f.text} className="flex items-start gap-1.5">
+              <CheckIcon className="mt-0.5 h-4 w-4 text-sky" />
+              {f.text}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="text-xs text-muted sm:col-span-2">*Illustrative premiums.</p>
     </div>
   );
@@ -286,9 +297,24 @@ function PolicyCard({ policy, nameOf, indexOf, onOpen }: {
         <span className="text-xs text-muted">{policy.memberIds.map(nameOf).join(", ")}</span>
       </div>
 
-      {policy.why && <p className="mt-3 text-sm text-ink">{policy.why}</p>}
+      {policy.reasons.length > 0 && (
+        <div className="mt-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted">Why this pick</div>
+          <ul className="mt-1 space-y-1">
+            {policy.reasons.map((r) => (
+              <li key={r} className="flex items-start gap-1.5 text-sm text-ink">
+                <CheckIcon className="mt-0.5 h-4 w-4 text-sky" />
+                <span>{r}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {policy.catches.length > 0 && (
-        <ul className="mt-3 space-y-1">
+        <div className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">Catches</div>
+      )}
+      {policy.catches.length > 0 && (
+        <ul className="mt-1 space-y-1">
           {policy.catches.map((c) => (
             <li key={c} className="flex items-start gap-1.5 text-sm text-ink">
               <AlertIcon className="mt-0.5 h-4 w-4 text-amber" />
@@ -296,6 +322,15 @@ function PolicyCard({ policy, nameOf, indexOf, onOpen }: {
             </li>
           ))}
         </ul>
+      )}
+      {policy.nextBest && (
+        <details className="group mt-3 rounded-lg bg-canvas px-3 py-2 text-sm">
+          <summary className="cursor-pointer list-none text-xs font-medium text-navy marker:hidden">
+            <span className="group-open:hidden">Show the next best option</span>
+            <span className="hidden group-open:inline">Next best option</span>
+          </summary>
+          <p className="mt-1.5 text-ink">{policy.nextBest}</p>
+        </details>
       )}
       <div className="mt-auto pt-3">
         <button type="button" onClick={onOpen}

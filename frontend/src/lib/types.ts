@@ -70,8 +70,11 @@ export type Policy = {
   copayPercent: number;
   waitsMonths: { initial: number; specificIllness: number; preExisting: number };
   catches: string[];
-  /** Plain reason for the pick, written by the explainer. Optional until the backend sends it. */
-  why?: string;
+  /** Why the solver made this pick, in plain sentences. */
+  reasons: string[];
+  /** What the solver would pick without this one, and what changes. */
+  nextBest?: string;
+  sourceUrl?: string;
 };
 
 export type PlanOption = {
@@ -105,6 +108,8 @@ export type Recommendation = {
   usual: PlanOption;
   mix: PlanOption;
   saving: number;
+  /** Facts comparing the mix with the usual pick, in plain sentences. */
+  vsUsual: { code: string; text: string }[];
   /** Most each member can claim in a year, from the solver. */
   memberCover: Record<string, number>;
   claimScenarios: ClaimScenario[];
