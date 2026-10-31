@@ -1,14 +1,9 @@
-// Talks to the backend when NEXT_PUBLIC_API_BASE_URL is set, otherwise uses
-// the mock so the UI can be built and demoed on its own.
+// Talks to the FastAPI backend. Set NEXT_PUBLIC_API_BASE_URL if it isn't on localhost:8000.
 
 import type { ChatRequest, ChatResponse, FamilyProfile, Recommendation } from "./types";
 import { claimsFor, toRecommendation, toSolverFamily, type SolverClaimSeries, type SolverOutput } from "./solver";
-import { createMockChat } from "./mock/chat";
-import { demoRecommendationFor } from "./mock/demo";
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
-
-export const usingMock = !BASE;
+const BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -20,20 +15,14 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-const mockChat = createMockChat();
-
 export function sendChat(req: ChatRequest): Promise<ChatResponse> {
-  return BASE ? post<ChatResponse>("/chat", req) : mockChat(req);
+  return post<ChatResponse>("/chat", req);
 }
 
 export class NoFitError extends Error {}
 
 /** Runs the solver. The backend returns its own output format, mapped here. */
 export async function getRecommendation(family: FamilyProfile, sessionId: string): Promise<Recommendation> {
-  if (!BASE) {
-    await new Promise((r) => setTimeout(r, 300));
-    return demoRecommendationFor(family);
-  }
   const solverFamily = toSolverFamily(family, sessionId);
   const { id, solution, claim_checks } = await post<{ id?: string; solution: SolverOutput; claim_checks?: SolverClaimSeries[] }>(
     "/recommend",

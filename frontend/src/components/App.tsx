@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, FamilyProfile, Policy, Recommendation, Stage } from "@/lib/types";
-import { getRecommendation, NoFitError, sendChat, usingMock } from "@/lib/api";
+import { getRecommendation, NoFitError, sendChat } from "@/lib/api";
 import { missingList } from "@/lib/family";
 import { cover, rupees } from "@/lib/format";
 import { Avatar } from "./Avatar";
@@ -22,6 +22,24 @@ const WELCOME: ChatMessage = {
   role: "assistant",
   text: "Namaste. I'll help you cover your whole family with the right mix of health policies. Who should the plan cover? Tap the mic and speak in any language, or type.",
 };
+
+/** Typed or spoken ways to say "go ahead" once the family is complete. */
+const GO_AHEAD = /^(find my mix|go ahead|proceed|continue|yes,? go ahead|chalo|haan|हाँ|हां|आगे बढ़ो|आगे बढ़ें)[.!।]?$/i;
+
+/** The backend adds this when intake is done. The app says it in its own words instead. */
+const BACKEND_READY_LINE = /I have everything I need to find your options\.?/i;
+
+function readyMessage(language?: string): string {
+  const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+  if (language === "hi-IN") {
+    return wide
+      ? "मेरे पास सारी जानकारी है। दाईं ओर परिवार की जानकारी एक बार देख लें, फिर Find my mix दबाएं।"
+      : "मेरे पास सारी जानकारी है। Family board खोलकर जानकारी देख लें, फिर Find my mix दबाएं।";
+  }
+  return wide
+    ? "I have all the details I need. Check your family on the right, then tap Find my mix to see your plan. You can also say go ahead."
+    : "I have all the details I need. Open the Family board tab, check the details, then tap Find my mix. You can also say go ahead.";
+}
 
 let counter = 0;
 const nextId = () => `m${++counter}`;
@@ -113,7 +131,7 @@ export function App() {
   }, [pending]);
 
   const send = useCallback(async (text: string, meta: SendMeta) => {
-    if (/^find my mix[.!]?$/i.test(text.trim()) && ready && !rec) {
+    if (GO_AHEAD.test(text.trim()) && ready && !rec) {
       push({ role: "user", text, via: meta.via, language: meta.language });
       void findMix();
       return;
@@ -135,7 +153,14 @@ export function App() {
       setMissing(res.missing);
       setReady(res.readyToOptimise);
       setQuickReplies(res.quickReplies);
-      push({ role: "assistant", text: res.reply, citations: res.citations });
+      const nowReady = res.readyToOptimise && !ready && !rec;
+      const reply = nowReady ? res.reply.replace(BACKEND_READY_LINE, "").trim() : res.reply;
+      if (reply) push({ role: "assistant", text: reply, citations: res.citations });
+      // Tell the user plainly that intake is done and where to go next.
+      if (nowReady) {
+        push({ role: "assistant", text: readyMessage(meta.language) });
+        setQuickReplies(["Find my mix"]);
+      }
     } catch {
       push({
         role: "assistant",
@@ -199,7 +224,6 @@ export function App() {
             <div className="font-semibold">Parivaar Cover</div>
             <div className="hidden text-[11px] text-white/60 sm:block">Health cover for the whole family</div>
           </div>
-          {usingMock && <span className="ml-1 rounded-full bg-amber px-2 py-0.5 text-[10px] font-semibold text-navy">Prototype</span>}
         </div>
         <JourneySteps stage={stage} />
       </header>

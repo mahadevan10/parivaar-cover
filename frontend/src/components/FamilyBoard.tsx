@@ -85,7 +85,9 @@ export function FamilyBoard({ family, missing, ready, changedIds, busy, onChange
           type="button"
           onClick={onFindMix}
           disabled={!ready || busy}
-          className="w-full rounded-xl bg-navy px-5 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-navy/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky disabled:cursor-not-allowed disabled:bg-navy/30"
+          className={`w-full rounded-xl bg-navy px-5 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-navy/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky disabled:cursor-not-allowed disabled:bg-navy/30 ${
+            ready && !busy ? "ring-4 ring-sky/40 animate-pulse" : ""
+          }`}
         >
           {ready ? "Find my mix" : `Find my mix (${missing.length} ${missing.length === 1 ? "detail" : "details"} to go)`}
         </button>

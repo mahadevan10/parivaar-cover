@@ -7,7 +7,7 @@ Chat and voice UI for Parivaar Cover. Read the root `CLAUDE.md` first, then `CON
 ## Rules for this folder
 
 - Only edit files inside `frontend/`. Backend (solver, LLM calls) belongs to the other developer. Contract changes go through `docs/api-contract.md` and need their agreement before moving to `shared/`.
-- The UI never picks policies or computes premiums. It shows what `/recommend` returns. The mock in `src/lib/mock/` only stands in until the backend is live.
+- The UI never picks policies or computes premiums. It shows what `/recommend` returns. There is no mock; the app needs the backend running.
 - Every place that shows a premium must say it is illustrative.
 - Copy follows the root product copy rules: short plain sentences, sentence case, no dashes as punctuation, no hype.
 - After a meaningful change, run `/update-context` so `CONTEXT.md` stays current.
@@ -24,8 +24,6 @@ Chat and voice UI for Parivaar Cover. Read the root `CLAUDE.md` first, then `CON
 | `src/app/api/stt/route.ts` | Sarvam speech-to-text proxy (keeps the key server side) |
 | `src/app/api/tts/route.ts` | Sarvam text-to-speech proxy, reads replies aloud |
 | `src/lib/useRecorder.ts`, `useSpeaker.ts` | Mic recording with pause detection for talk mode; reply playback |
-| `src/lib/api.ts` | Backend client, falls back to the mock |
+| `src/lib/api.ts` | Backend client (`/chat`, `/recommend`) |
 | `src/lib/types.ts` | Request and response shapes (mirror of `docs/api-contract.md`) |
 | `src/lib/solver.ts` | Backend formats and the mapping to UI types |
-| `src/lib/mock/` | Demo data read from `shared/`, claim-check fixture, mock chat |
-| `scripts/gen_claim_checks.py` | Rebuilds the claim-check fixture from the backend's `claim_check()` |

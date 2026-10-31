@@ -37,7 +37,7 @@ Response:
 }
 ```
 
-`frontend/scripts/gen_claim_checks.py` builds exactly this from the backend's `claim_check()`, and can be copied for the endpoint. If `claim_checks` is missing, the UI falls back to `solution.claim_check` as a single year.
+If `claim_checks` is missing, the UI falls back to `solution.claim_check` as a single year.
 
 ## POST /chat
 

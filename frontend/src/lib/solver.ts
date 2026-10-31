@@ -135,18 +135,6 @@ export function toSolverFamily(family: FamilyProfile, id: string): SolverFamily 
   };
 }
 
-export function fromSolverFamily(f: SolverFamily): FamilyProfile {
-  const office = f.office_cover[0];
-  return {
-    members: f.members.map((m) => ({ ...m, conditions: [...m.conditions], heardFrom: undefined })),
-    city: f.city,
-    budget: f.budget,
-    officeCover: office ? { amount: office.sum_insured, memberIds: office.members } : undefined,
-    healthChecked: true,
-    officeChecked: true,
-  };
-}
-
 function toPolicy(p: SolverPick): Policy {
   return {
     id: p.policy_id,
@@ -236,28 +224,5 @@ export function toRecommendation(out: SolverOutput, claimSeries: SolverClaimSeri
     vsUsual: out.vs_usual ?? [],
     memberCover: out.member_cover,
     claimScenarios: (claimSeries.length ? claimSeries : single).map(toClaimScenario),
-  };
-}
-
-/**
- * Rename member ids in solver output, e.g. when the demo output (ids like "mohan")
- * is shown for a family the user built in chat (generated ids).
- */
-export function remapMembers(out: SolverOutput, series: SolverClaimSeries[], map: (id: string) => string) {
-  const pick = (p: SolverPick): SolverPick => ({ ...p, members: p.members.map(map) });
-  const claim = (c: SolverClaim): SolverClaim => ({ ...c, member_id: map(c.member_id) });
-  return {
-    out: {
-      ...out,
-      picks: out.picks.map(pick),
-      usual_pick: out.usual_pick && pick(out.usual_pick),
-      member_cover: Object.fromEntries(Object.entries(out.member_cover).map(([k, v]) => [map(k), v])),
-      claim_check: out.claim_check && { mix: claim(out.claim_check.mix), usual: claim(out.claim_check.usual) },
-    },
-    series: series.map((s) => ({
-      ...s,
-      member_id: map(s.member_id),
-      by_year: s.by_year.map((y) => ({ ...y, mix: claim(y.mix), usual: y.usual && claim(y.usual) })),
-    })),
   };
 }
