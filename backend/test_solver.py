@@ -32,6 +32,26 @@ class DemoFamily(unittest.TestCase):
         self.assertEqual(usual["waiting_periods_months"]["pre_existing"], 36)
         self.assertEqual(self.result["saving_vs_usual"], 11000)
 
+    def test_every_pick_has_reasons_ending_in_next_best(self):
+        for p in self.result["picks"]:
+            self.assertTrue(all(r["text"] for r in p["reasons"]), p["policy_id"])
+            self.assertEqual(p["reasons"][-1]["code"], "next_best", p["policy_id"])
+
+    def test_senior_plan_reasons_cite_the_short_diabetes_wait(self):
+        reasons = next(p for p in self.result["picks"] if p["policy_id"] == "star-red-carpet-10l")["reasons"]
+        wait = next(r for r in reasons if r["code"] == "condition_wait")
+        self.assertEqual((wait["member"], wait["months"]), ("mohan", 12))
+        self.assertEqual(wait["clause"], "waiting_periods_months.pre_existing")
+        changes = reasons[-1]["changes"]
+        self.assertIn({"member": "mohan", "term": "wait", "from": 12, "to": 24}, changes)
+
+    def test_vs_usual_reasons(self):
+        codes = {(r["code"], r.get("member")) for r in self.result["vs_usual"]}
+        self.assertIn(("premium", None), codes)
+        self.assertIn(("condition_wait", "mohan"), codes)
+        wait = next(r for r in self.result["vs_usual"] if r["code"] == "condition_wait")
+        self.assertEqual((wait["mix_months"], wait["usual_months"]), (12, 36))
+
     def test_mohan_heart_claim_in_year_2(self):
         mix = solver.claim_check(self.family, self.result["picks"], "mohan", 600000, 2, "diabetes", "cardiac")
         usual = solver.claim_check(self.family, [self.result["usual_pick"]], "mohan", 600000, 2, "diabetes", "cardiac")

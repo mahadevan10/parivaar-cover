@@ -44,4 +44,18 @@ Conditions use lowercase names: `diabetes`, `hypertension`, `asthma`, `heart_dis
 
 ## Solver output
 
-See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`), `picks` (policy, members, premium, catches), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `illustrative`.
+See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`), `picks` (policy, members, premium, catches, source, reasons), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `vs_usual`, `illustrative`.
+
+### Reasons
+
+The solver says why it made each pick, so the explainer only rewords facts and never invents them. Every reason has a `code`, the numbers behind it, and a plain `text` sentence.
+
+| Code | Where | Meaning |
+|---|---|---|
+| `priced_on_eldest` | floater picks | The floater's premium is set by this member's age |
+| `left_out` | floater picks | Why a member is not in the floater: `entry_age`, or `premium` with the price if they joined |
+| `topup_on_base` | top-up picks | Cover added, the deductible, and which base plan pays below it |
+| `condition_wait` | any pick | Months before a member's known condition is covered, the waits on other plans they could join, and the policy field it comes from (`clause`) |
+| `next_best` | every pick, last | The solver run again without this pick: what it swaps in, `premium_change`, and per-member `changes` in cover, wait, co-pay and room rent |
+
+`vs_usual` lists the same kind of facts against the usual single floater: the premium saving, each member's cover, and condition waits.

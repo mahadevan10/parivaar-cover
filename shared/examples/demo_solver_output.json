@@ -28,6 +28,43 @@
         "Illnesses you already have are covered only after 3 years.",
         "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
         "One cover is shared by everyone on the policy."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "reasons": [
+        {
+          "code": "priced_on_eldest",
+          "member": "rahul",
+          "age": 36,
+          "text": "The premium is set by the eldest member, Rahul, age 36."
+        },
+        {
+          "code": "left_out",
+          "member": "mohan",
+          "why": "entry_age",
+          "clause": "entry_age",
+          "max_entry_age": 40,
+          "text": "Mohan is not in it. Young Star Gold takes members up to age 40."
+        },
+        {
+          "code": "left_out",
+          "member": "lata",
+          "why": "entry_age",
+          "clause": "entry_age",
+          "max_entry_age": 40,
+          "text": "Lata is not in it. Young Star Gold takes members up to age 40."
+        },
+        {
+          "code": "next_best",
+          "possible": true,
+          "swapped_in": [
+            "₹10,00,000 Reliance General Health Infinity for Rahul",
+            "₹10,00,000 Reliance General Health Infinity for Sneha",
+            "₹10,00,000 Reliance General Health Infinity for Aarav"
+          ],
+          "premium_change": 600,
+          "changes": [],
+          "text": "The next best option uses ₹10,00,000 Reliance General Health Infinity for Rahul; ₹10,00,000 Reliance General Health Infinity for Sneha; ₹10,00,000 Reliance General Health Infinity for Aarav. It costs ₹600 more a year."
+        }
       ]
     },
     {
@@ -52,6 +89,64 @@
         "You pay 30% of every claim.",
         "Room rent is capped at 1% of the cover, at most ₹4,000 a day.",
         "Heart treatment, cataract, stroke, cancer and fractures have sub-limits."
+      ],
+      "source": "https://joinditto.in/health-insurance/compare-plans/comprehensive-vs-red-carpet-senior-citizens/",
+      "reasons": [
+        {
+          "code": "condition_wait",
+          "member": "mohan",
+          "condition": "diabetes",
+          "months": 12,
+          "other_options_months": [
+            12,
+            24,
+            36
+          ],
+          "clause": "waiting_periods_months.pre_existing",
+          "text": "Mohan's diabetes is covered after 1 year."
+        },
+        {
+          "code": "next_best",
+          "possible": true,
+          "swapped_in": [
+            "₹10,00,000 Star Health Arogya Sanjeevani for Lata",
+            "₹10,00,000 ManipalCigna Prime Senior Classic for Mohan"
+          ],
+          "premium_change": 2100,
+          "changes": [
+            {
+              "member": "mohan",
+              "term": "wait",
+              "from": 12,
+              "to": 24
+            },
+            {
+              "member": "mohan",
+              "term": "copay",
+              "from": 30,
+              "to": 0
+            },
+            {
+              "member": "mohan",
+              "term": "room_capped",
+              "from": true,
+              "to": false
+            },
+            {
+              "member": "lata",
+              "term": "copay",
+              "from": 0,
+              "to": 5
+            },
+            {
+              "member": "lata",
+              "term": "room_capped",
+              "from": false,
+              "to": true
+            }
+          ],
+          "text": "The next best option uses ₹10,00,000 Star Health Arogya Sanjeevani for Lata; ₹10,00,000 ManipalCigna Prime Senior Classic for Mohan. It costs ₹2,100 more a year. Mohan waits 1 year longer for existing illness cover. Mohan pays 0% of each claim, against 30% in the mix. Mohan gets uncapped room rent. Lata pays 5% of each claim, against 0% in the mix. Lata gets capped room rent."
+        }
       ]
     },
     {
@@ -74,6 +169,19 @@
       "catches": [
         "Illnesses you already have are covered only after 3 years.",
         "Some listed illnesses, like cataract and hernia, are covered only after 2 years."
+      ],
+      "source": "https://reliancegeneral.co.in/health-insurance/health-infinity-insurance",
+      "reasons": [
+        {
+          "code": "next_best",
+          "possible": true,
+          "swapped_in": [
+            "₹10,00,000 Reliance General Health Gain for Lata"
+          ],
+          "premium_change": 1400,
+          "changes": [],
+          "text": "The next best option uses ₹10,00,000 Reliance General Health Gain for Lata. It costs ₹1,400 more a year."
+        }
       ]
     },
     {
@@ -98,6 +206,26 @@
       "catches": [
         "Pays only after the year's bills cross ₹10 lakh.",
         "Illnesses you already have are covered only after 3 years."
+      ],
+      "source": "https://www.starhealth.in/health-insurance/",
+      "reasons": [
+        {
+          "code": "topup_on_base",
+          "deductible": 1000000,
+          "sum_insured": 5000000,
+          "premium": 4500,
+          "text": "Adds ₹50,00,000 of cover for ₹4,500 a year. It pays once a claim passes ₹10,00,000. Below that, Young Star Gold pays for Rahul, Sneha and Aarav."
+        },
+        {
+          "code": "next_best",
+          "possible": true,
+          "swapped_in": [
+            "₹50,00,000 ManipalCigna Super Top Up for Rahul, Sneha and Aarav"
+          ],
+          "premium_change": 200,
+          "changes": [],
+          "text": "The next best option uses ₹50,00,000 ManipalCigna Super Top Up for Rahul, Sneha and Aarav. It costs ₹200 more a year."
+        }
       ]
     },
     {
@@ -121,6 +249,49 @@
       "catches": [
         "Pays only after the year's bills cross ₹10 lakh.",
         "Illnesses you already have are covered after 2 years."
+      ],
+      "source": "https://manipalcigna.com/blog-entry/-/blogs/manipalcigna-health-insurance-launches-value-formoney-super-top-up-plan",
+      "reasons": [
+        {
+          "code": "topup_on_base",
+          "deductible": 1000000,
+          "sum_insured": 2500000,
+          "premium": 16000,
+          "text": "Adds ₹25,00,000 of cover for ₹16,000 a year. It pays once a claim passes ₹10,00,000. Below that, Senior Citizens Red Carpet pays for Mohan; Health Infinity pays for Lata."
+        },
+        {
+          "code": "condition_wait",
+          "member": "mohan",
+          "condition": "diabetes",
+          "months": 24,
+          "other_options_months": [
+            24,
+            36
+          ],
+          "clause": "waiting_periods_months.pre_existing",
+          "text": "Mohan's diabetes is covered after 2 years."
+        },
+        {
+          "code": "next_best",
+          "possible": true,
+          "swapped_in": [
+            "₹50,00,000 Star Health Super Surplus Gold for Rahul and Sneha",
+            "₹25,00,000 ManipalCigna Super Top Up for Aarav, Mohan and Lata",
+            "₹10,00,000 Reliance General Health Infinity for Rahul",
+            "₹10,00,000 Reliance General Health Infinity for Sneha",
+            "₹25,00,000 Reliance General Health Infinity for Aarav"
+          ],
+          "premium_change": 2300,
+          "changes": [
+            {
+              "member": "aarav",
+              "term": "cover",
+              "from": 6000000,
+              "to": 5000000
+            }
+          ],
+          "text": "The next best option uses ₹50,00,000 Star Health Super Surplus Gold for Rahul and Sneha; ₹25,00,000 ManipalCigna Super Top Up for Aarav, Mohan and Lata; ₹10,00,000 Reliance General Health Infinity for Rahul; ₹10,00,000 Reliance General Health Infinity for Sneha; ₹25,00,000 Reliance General Health Infinity for Aarav. It costs ₹2,300 more a year. Aarav gets ₹10,00,000 less cover."
+        }
       ]
     }
   ],
@@ -158,9 +329,59 @@
       "Illnesses you already have are covered only after 3 years.",
       "Some listed illnesses, like cataract and hernia, are covered only after 2 years.",
       "One cover is shared by everyone on the policy."
-    ]
+    ],
+    "source": "https://www.starhealth.in/health-insurance/"
   },
   "saving_vs_usual": 11000,
+  "vs_usual": [
+    {
+      "code": "premium",
+      "saving": 11000,
+      "text": "The mix costs ₹11,000 less a year than one ₹25,00,000 Star Comprehensive floater."
+    },
+    {
+      "code": "member_cover",
+      "member": "rahul",
+      "mix": 6000000,
+      "usual": 2500000,
+      "text": "Rahul gets ₹60,00,000 of cover, against a shared ₹25,00,000."
+    },
+    {
+      "code": "member_cover",
+      "member": "sneha",
+      "mix": 6000000,
+      "usual": 2500000,
+      "text": "Sneha gets ₹60,00,000 of cover, against a shared ₹25,00,000."
+    },
+    {
+      "code": "member_cover",
+      "member": "aarav",
+      "mix": 6000000,
+      "usual": 2500000,
+      "text": "Aarav gets ₹60,00,000 of cover, against a shared ₹25,00,000."
+    },
+    {
+      "code": "member_cover",
+      "member": "mohan",
+      "mix": 3500000,
+      "usual": 2500000,
+      "text": "Mohan gets ₹35,00,000 of cover, against a shared ₹25,00,000."
+    },
+    {
+      "code": "member_cover",
+      "member": "lata",
+      "mix": 3500000,
+      "usual": 2500000,
+      "text": "Lata gets ₹35,00,000 of cover, against a shared ₹25,00,000."
+    },
+    {
+      "code": "condition_wait",
+      "member": "mohan",
+      "mix_months": 12,
+      "usual_months": 36,
+      "text": "Mohan's diabetes is covered from year 2, against year 4 with the usual pick."
+    }
+  ],
   "claim_check": {
     "mix": {
       "member_id": "mohan",

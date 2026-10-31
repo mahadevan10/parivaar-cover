@@ -102,9 +102,11 @@ def target_lakhs(member):
     return TARGET_LAKHS_60_PLUS if member["age"] >= 60 else TARGET_LAKHS_UNDER_60
 
 
-def solve(family, policies=None):
-    policies = policies or load_policies()
-    cands = candidates(family, policies)
+def optimise(family, cands, forbid=None):
+    """Indices of the best candidates to buy, or None when nothing fits the budget.
+
+    forbid rules out one candidate, which shows what the solver would pick without it.
+    """
     office = office_cover(family)
     model = cp_model.CpModel()
     x = [model.NewBoolVar(f"c{i}") for i in range(len(cands))]
@@ -141,6 +143,8 @@ def solve(family, policies=None):
             model.Add(x[i] <= sum(x[j] for j in enough))
 
     model.Add(sum(c["premium"] * x[i] for i, c in enumerate(cands)) <= family["budget"])
+    if forbid is not None:
+        model.Add(x[forbid] == 0)
     objective += [-(c["premium"] + c["penalty"]) * x[i] for i, c in enumerate(cands)]
     model.Maximize(sum(objective))
 
@@ -148,10 +152,19 @@ def solve(family, policies=None):
     solver.parameters.max_time_in_seconds = 10
     status = solver.Solve(model)
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        return None
+    return [i for i in range(len(cands)) if solver.Value(x[i])]
+
+
+def solve(family, policies=None):
+    policies = policies or load_policies()
+    cands = candidates(family, policies)
+    chosen = optimise(family, cands)
+    if chosen is None:
         return {"status": "no_fit", "family_id": family["id"], "budget": family["budget"],
                 "message": "No mix covers everyone within this budget."}
 
-    picks = [pick_out(cands[i]) for i in range(len(cands)) if solver.Value(x[i])]
+    picks = [dict(pick_out(cands[i]), reasons=reasons_for(family, cands, chosen, i)) for i in chosen]
     picks.sort(key=lambda p: (p["plan_type"] == "super_topup", -len(p["members"])))
     usual = usual_pick(family, policies)
     total = sum(p["premium"] for p in picks)
@@ -166,6 +179,7 @@ def solve(family, policies=None):
         "member_cover": member_cover(family, picks),
         "usual_pick": usual,
         "saving_vs_usual": usual["premium"] - total if usual else None,
+        "vs_usual": vs_usual(family, picks, usual),
     }
 
 
@@ -176,7 +190,179 @@ def pick_out(c):
         "members": c["members"], "sum_insured": p["sum_insured"], "deductible": p["deductible"],
         "premium": c["premium"], "copay_percent": p["copay_percent"],
         "waiting_periods_months": p["waiting_periods_months"], "catches": p["catches"],
+        "source": p["source"],
     }
+
+
+# Reasons are facts the solver worked out, each with a code, the numbers behind it and
+# a plain sentence. The explainer turns them into its answer and must not add its own.
+
+def names(items):
+    items = list(items)
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def duration(months):
+    if months % 12:
+        return f"{months} months"
+    return "1 year" if months == 12 else f"{months // 12} years"
+
+
+def years(months):
+    return f"after {duration(months)}" if months else "with no wait"
+
+
+def wait_clause(policy, condition):
+    if condition in policy["condition_waits_months"]:
+        return f"condition_waits_months.{condition}"
+    return "waiting_periods_months.pre_existing"
+
+
+def base_index(cands, chosen, mid):
+    return next((i for i in chosen if mid in cands[i]["members"] and not is_topup(cands[i]["policy"])), None)
+
+
+def reasons_for(family, cands, chosen, i):
+    c, policy = cands[i], cands[i]["policy"]
+    by_id = {m["id"]: m for m in family["members"]}
+    group = [by_id[mid] for mid in c["members"]]
+    reasons = []
+
+    if policy["plan_type"] == "floater":
+        eldest = max(group, key=lambda m: m["age"])
+        reasons.append({"code": "priced_on_eldest", "member": eldest["id"], "age": eldest["age"],
+                        "text": f"The premium is set by the eldest member, {eldest['name']}, age {eldest['age']}."})
+        for m in family["members"]:
+            if m["id"] in c["members"]:
+                continue
+            if not policy["entry_age"]["min"] <= m["age"] <= policy["entry_age"]["max"]:
+                reasons.append({"code": "left_out", "member": m["id"], "why": "entry_age",
+                                "clause": "entry_age", "max_entry_age": policy["entry_age"]["max"],
+                                "text": f"{m['name']} is not in it. {policy['product']} takes members up to "
+                                        f"age {policy['entry_age']['max']}."})
+            elif len(group) < policy["max_members"]:
+                with_them = premium_for(policy, [g["age"] for g in group] + [m["age"]])
+                if with_them is not None:
+                    reasons.append({"code": "left_out", "member": m["id"], "why": "premium",
+                                    "premium_with_member": with_them,
+                                    "text": f"{m['name']} is not in it. Adding {m['name']} would raise "
+                                            f"this premium from {inr(c['premium'])} to {inr(with_them)}."})
+
+    if is_topup(policy):
+        below = {}
+        for m in group:
+            j = base_index(cands, chosen, m["id"])
+            below.setdefault(cands[j]["policy"]["product"] if j is not None else "office cover", []).append(m["name"])
+        reasons.append({"code": "topup_on_base", "deductible": policy["deductible"],
+                        "sum_insured": policy["sum_insured"], "premium": c["premium"],
+                        "text": f"Adds {inr(policy['sum_insured'])} of cover for {inr(c['premium'])} a year. "
+                                f"It pays once a claim passes {inr(policy['deductible'])}. Below that, "
+                                + "; ".join(f"{product} pays for {names(who)}" for product, who in below.items()) + "."})
+
+    for m in group:
+        for cond in m["conditions"]:
+            months = condition_wait(policy, [cond])
+            others = sorted({condition_wait(o["policy"], [cond]) for o in cands
+                             if m["id"] in o["members"] and is_topup(o["policy"]) == is_topup(policy)
+                             and o["policy"]["id"] != policy["id"]})
+            text = f"{m['name']}'s {cond.replace('_', ' ')} is covered {years(months)}."
+            if others and min(others) > months:
+                text += f" Every other plan {m['name']} can join waits longer, at least {duration(others[0])}."
+            elif others and min(others) < months:
+                text += f" The shortest wait on another plan {m['name']} can join is {duration(others[0])}."
+            reasons.append({"code": "condition_wait", "member": m["id"], "condition": cond,
+                            "months": months, "other_options_months": others,
+                            "clause": wait_clause(policy, cond), "text": text})
+
+    reasons.append(next_best(family, cands, chosen, i))
+    return reasons
+
+
+def member_terms(family, cands, idx):
+    """Per member: total cover, plus wait, co-pay and room rent on their base policy."""
+    office = office_cover(family)
+    terms = {}
+    for m in family["members"]:
+        mine = [cands[j]["policy"] for j in idx if m["id"] in cands[j]["members"]]
+        base = next((p for p in mine if not is_topup(p)), None)
+        terms[m["id"]] = {
+            "cover": office[m["id"]] + sum(p["sum_insured"] for p in mine),
+            "wait": condition_wait(base, m["conditions"]) if base else 0,
+            "copay": base["copay_percent"] if base else 0,
+            "room_capped": base["room_rent"]["capped"] if base else False,
+        }
+    return terms
+
+
+def next_best(family, cands, chosen, i):
+    """What the solver picks when this candidate is ruled out, compared with the chosen mix."""
+    alt = optimise(family, cands, forbid=i)
+    if alt is None:
+        return {"code": "next_best", "possible": False,
+                "text": "Without this plan, no mix covers everyone within the budget."}
+    by_id = {m["id"]: m for m in family["members"]}
+
+    def label(j):
+        p = cands[j]["policy"]
+        return f"{inr(p['sum_insured'])} {p['insurer']} {p['product']} for {names(by_id[mid]['name'] for mid in cands[j]['members'])}"
+
+    premium_change = sum(cands[j]["premium"] for j in alt) - sum(cands[j]["premium"] for j in chosen)
+    now, then = member_terms(family, cands, chosen), member_terms(family, cands, alt)
+    changes = [{"member": mid, "term": term, "from": now[mid][term], "to": then[mid][term]}
+               for mid in now for term in now[mid] if now[mid][term] != then[mid][term]]
+
+    # One sentence per kind of change, naming everyone it applies to.
+    grouped = {}
+    for ch in changes:
+        if ch["term"] == "cover":
+            diff = ch["to"] - ch["from"]
+            key = f"get{{s}} {inr(abs(diff))} {'more' if diff > 0 else 'less'} cover."
+        elif ch["term"] == "wait":
+            diff = ch["to"] - ch["from"]
+            key = f"wait{{s}} {duration(abs(diff))} {'longer' if diff > 0 else 'less'} for existing illness cover."
+        elif ch["term"] == "copay":
+            key = f"pay{{s}} {ch['to']}% of each claim, against {ch['from']}% in the mix."
+        else:
+            key = f"get{{s}} {'capped' if ch['to'] else 'uncapped'} room rent."
+        grouped.setdefault(key, []).append(by_id[ch["member"]]["name"])
+    sentences = [names(who) + " " + key.format(s="s" if len(who) == 1 else "") for key, who in grouped.items()]
+    if premium_change:
+        sentences.insert(0, f"It costs {inr(abs(premium_change))} {'more' if premium_change > 0 else 'less'} a year.")
+    swapped_in = [label(j) for j in alt if j not in chosen]
+    text = f"The next best option uses {'; '.join(swapped_in) or 'fewer plans'}. " + " ".join(sentences)
+    return {"code": "next_best", "possible": True, "swapped_in": swapped_in,
+            "premium_change": premium_change, "changes": changes, "text": text.strip()}
+
+
+def vs_usual(family, picks, usual):
+    """How the mix compares with the usual single floater."""
+    if usual is None:
+        return []
+    out = []
+    saving = usual["premium"] - sum(p["premium"] for p in picks)
+    out.append({"code": "premium", "saving": saving,
+                "text": f"The mix costs {inr(abs(saving))} {'less' if saving >= 0 else 'more'} a year than "
+                        f"one {inr(usual['sum_insured'])} {usual['product']} floater."})
+    cover = member_cover(family, picks)
+    for m in family["members"]:
+        mine = cover[m["id"]]
+        if mine != usual["sum_insured"]:
+            out.append({"code": "member_cover", "member": m["id"], "mix": mine, "usual": usual["sum_insured"],
+                        "text": f"{m['name']} gets {inr(mine)} of cover, against a shared {inr(usual['sum_insured'])}."})
+    policies = {p["id"]: p for p in load_policies()}
+    for m in family["members"]:
+        if not m["conditions"]:
+            continue
+        base = next((p for p in picks if m["id"] in p["members"] and p["plan_type"] != "super_topup"), None)
+        if base is None:
+            continue
+        mix_wait = condition_wait(policies[base["policy_id"]], m["conditions"])
+        usual_wait = condition_wait(policies[usual["policy_id"]], m["conditions"])
+        if mix_wait != usual_wait:
+            out.append({"code": "condition_wait", "member": m["id"], "mix_months": mix_wait, "usual_months": usual_wait,
+                        "text": f"{m['name']}'s {', '.join(m['conditions'])} is covered from year {mix_wait // 12 + 1}, "
+                                f"against year {usual_wait // 12 + 1} with the usual pick."})
+    return out
 
 
 def member_cover(family, picks):
