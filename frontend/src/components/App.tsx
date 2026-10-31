@@ -126,7 +126,7 @@ export function App() {
       : "No single floater can take your whole family.";
     push({
       role: "assistant",
-      text: `Here is your mix. ${pending.mix.policies.length} policies for ${rupees(pending.mix.premium)} a year with ${cover(pending.mix.totalCover)} of total cover.${short} ${usualLine} Premiums are illustrative. Ask me about any pick, or try the claim check.`,
+      text: `Here is your mix. ${pending.mix.policies.length} policies for ${rupees(pending.mix.premium)} a year with ${cover(pending.mix.totalCover)} of total cover.${short} ${usualLine} Ask me about any pick, or try the claim check.`,
     });
     setQuickReplies(["Why not one floater?", "What is a super top-up?", "What are the catches?"]);
   }, [pending]);

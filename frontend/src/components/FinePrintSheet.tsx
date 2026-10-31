@@ -22,7 +22,7 @@ export function FinePrintSheet({ policy, onClose }: { policy: Policy | null; onC
     ? [
         ["Cover", cover(policy.sumInsured)],
         ...(policy.deductible ? [["Starts after", cover(policy.deductible)] as [string, string]] : []),
-        ["Premium", `${rupees(policy.premium)} a year, illustrative`],
+        ["Premium", `${rupees(policy.premium)} a year`],
         ["Co-pay", policy.copayPercent ? `You pay ${policy.copayPercent}% of each claim` : "None"],
         ["Wait for illnesses you already have", months(policy.waitsMonths.preExisting)],
         ["Wait for listed illnesses", months(policy.waitsMonths.specificIllness)],

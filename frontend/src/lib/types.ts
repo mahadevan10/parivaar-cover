@@ -120,8 +120,6 @@ export type CoverCheck = {
 
 export type Recommendation = {
   id: string;
-  /** Premiums are illustrative in the prototype. The UI labels them wherever shown. */
-  illustrative: boolean;
   /** Null when no single floater can take the whole family, e.g. a parent past its entry age. */
   usual: PlanOption | null;
   mix: PlanOption;

@@ -32,12 +32,6 @@ export function Results({ rec, family, onOpenPolicy, onEditFamily }: Props) {
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 id="results-title" className="text-lg font-semibold text-navy">Your family&apos;s mix</h2>
-          {rec.illustrative && (
-            <p className="text-sm text-muted">
-              <span className="mr-1.5 rounded bg-amber-soft px-1.5 py-0.5 text-xs font-semibold text-ink">Illustrative premiums</span>
-              Prices are samples for this prototype. Real quotes come from insurers.
-            </p>
-          )}
         </div>
         <button type="button" onClick={onEditFamily} className="text-sm font-medium text-sky hover:underline">
           Edit family
@@ -91,7 +85,7 @@ function CoverShort({ check }: { check: CoverCheck }) {
         </div>
         <p>{check.text}</p>
         {check.budgetNeeded != null && (
-          <p className="text-muted">Premiums are illustrative, so this budget is too. To try another budget, tap Edit family and tell me the new amount.</p>
+          <p className="text-muted">To try another budget, tap Edit family and tell me the new amount.</p>
         )}
       </div>
     </div>
@@ -142,7 +136,7 @@ function SummaryBox({ recId }: { recId: string }) {
       )}
       {summary && (
         <p className="mt-3 text-[11px] text-white/60">
-          {summary.source === "llm" ? "Written by AI from the solver's results." : "From the solver's results."} Premiums are illustrative.
+          {summary.source === "llm" ? "Written by AI from the solver's results." : "From the solver's results."}
         </p>
       )}
     </div>
@@ -173,7 +167,7 @@ function Compare({ rec, family }: { rec: Recommendation; family: FamilyProfile }
       {usual ? (
         <div className="rounded-2xl border border-line bg-white p-4">
           <div className="text-sm font-medium text-muted">{usual.label}</div>
-          <div className="mt-1 text-2xl font-bold text-ink">{rupees(usual.premium)}<span className="text-sm font-normal text-muted"> a year*</span></div>
+          <div className="mt-1 text-2xl font-bold text-ink">{rupees(usual.premium)}<span className="text-sm font-normal text-muted"> a year</span></div>
           <div className="mt-0.5 text-sm text-ink">{cover(usual.totalCover)} total cover</div>
           <ul className="mt-3 space-y-1 text-sm text-muted">
             {usualPolicy && <li>· One {usualPolicy.product} floater for all {usualPolicy.memberIds.length}</li>}
@@ -192,7 +186,7 @@ function Compare({ rec, family }: { rec: Recommendation; family: FamilyProfile }
       <div className="relative rounded-2xl border-2 border-sky bg-white p-4 shadow-sm">
         <span className="absolute -top-3 left-4 rounded-full bg-sky px-2.5 py-0.5 text-xs font-semibold text-navy">Recommended</span>
         <div className="text-sm font-medium text-navy">{mix.label}</div>
-        <div className="mt-1 text-2xl font-bold text-navy">{rupees(mix.premium)}<span className="text-sm font-normal text-muted"> a year*</span></div>
+        <div className="mt-1 text-2xl font-bold text-navy">{rupees(mix.premium)}<span className="text-sm font-normal text-muted"> a year</span></div>
         <div className="mt-0.5 text-sm text-ink">{cover(mix.totalCover)} total cover</div>
         <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
           {rec.saving != null && rec.saving > 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">{rupees(rec.saving)} less a year</span>}
@@ -221,7 +215,6 @@ function Compare({ rec, family }: { rec: Recommendation; family: FamilyProfile }
           ))}
         </ul>
       )}
-      <p className="text-xs text-muted sm:col-span-2">*Illustrative premiums.</p>
     </div>
   );
 }
@@ -389,7 +382,7 @@ function PolicyCard({ policy, nameOf, indexOf, onOpen }: {
         </div>
         <div className="text-right">
           <div className="font-bold text-navy">{rupees(policy.premium)}</div>
-          <div className="text-[11px] text-muted">a year, illustrative</div>
+          <div className="text-[11px] text-muted">a year</div>
         </div>
       </div>
 

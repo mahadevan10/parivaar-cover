@@ -8,7 +8,6 @@ Chat and voice UI for Parivaar Cover. Read the root `CLAUDE.md` first, then `CON
 
 - Only edit files inside `frontend/`. Backend (solver, LLM calls) belongs to the other developer. Contract changes go through `docs/api-contract.md` and need their agreement before moving to `shared/`.
 - The UI never picks policies or computes premiums. It shows what `/recommend` returns. There is no mock; the app needs the backend running.
-- Every place that shows a premium must say it is illustrative.
 - Copy follows the root product copy rules: short plain sentences, sentence case, no dashes as punctuation, no hype.
 - After a meaningful change, run `/update-context` so `CONTEXT.md` stays current.
 
