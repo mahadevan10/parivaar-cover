@@ -147,6 +147,7 @@ export function App() {
         family: familyRef.current,
         history,
         recommendationId: rec?.id,
+        language: meta.language,
       });
       applyFamily(res.family);
       setMissing(res.missing);

@@ -69,9 +69,12 @@ Request:
   "message": "My father Mohan is 64 and diabetic",
   "family": FamilyProfile,
   "history": [{ "role": "assistant", "text": "..." }, { "role": "user", "text": "..." }],
-  "recommendationId": "set after /recommend, so follow-up questions are answered from that result"
+  "recommendationId": "set after /recommend, so follow-up questions are answered from that result",
+  "language": "hi-IN"
 }
 ```
+
+`language` is set when the message was spoken: the language Sarvam detected. The reply should be in that language. It is missing for typed messages.
 
 Response:
 
