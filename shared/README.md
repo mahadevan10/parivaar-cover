@@ -42,9 +42,11 @@ Each policy is one product at one sum insured:
 
 Conditions use lowercase names: `diabetes`, `hypertension`, `asthma`, `heart_disease`.
 
+A member may have `min_cover`, the least cover in rupees the user asked for them (office cover counts). The solver must meet it.
+
 ## Solver output
 
-See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`), `picks` (policy, members, premium, catches, source, reasons), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `vs_usual`, `illustrative`.
+See `examples/demo_solver_output.json`. Main fields: `status` (`ok` or `no_fit`; a `no_fit` also has `budget_needed`, the lowest yearly premium that meets every rule, or `null` when no mix can), `picks` (policy, members, premium, catches, source, reasons), `total_premium`, `total_cover`, `member_cover`, `usual_pick`, `saving_vs_usual`, `vs_usual`, `illustrative`.
 
 ### Reasons
 

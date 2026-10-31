@@ -251,6 +251,22 @@ function MemberCard({ member, index, flash, onChange, onRemove }: {
         )}
       </div>
 
+      {member.minCover ? (
+        <div className="mt-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-sky-soft px-2.5 py-0.5 text-xs font-medium text-navy">
+            Cover wanted: at least {cover(member.minCover)}
+            <button
+              type="button"
+              aria-label={`Remove the cover wanted for ${member.name}`}
+              onClick={() => onChange({ minCover: undefined })}
+              className="rounded-full hover:text-rose-600"
+            >
+              <XIcon className="h-3 w-3" />
+            </button>
+          </span>
+        </div>
+      ) : null}
+
       {member.heardFrom && (
         <p className="mt-3 flex items-start gap-1.5 border-t border-line pt-2 text-xs text-muted">
           <MicIcon className="mt-px h-3.5 w-3.5 text-sky" />

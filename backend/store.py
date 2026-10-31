@@ -96,3 +96,11 @@ def recommendation(rec_id):
         row = conn.execute("SELECT result FROM recommendations WHERE id = ? OR alias = ? ORDER BY created_at DESC, rowid DESC",
                            (rec_id, rec_id)).fetchone()
     return json.loads(row["result"]) if row else None
+
+
+def recommendation_family(rec_id):
+    """The Family a recommendation was solved for, as a dict, or None."""
+    with closing(connect()) as conn:
+        row = conn.execute("SELECT family FROM recommendations WHERE id = ? OR alias = ? ORDER BY created_at DESC, rowid DESC",
+                           (rec_id, rec_id)).fetchone()
+    return json.loads(row["family"]) if row else None

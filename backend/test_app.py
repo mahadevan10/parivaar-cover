@@ -153,6 +153,47 @@ class Explain(unittest.TestCase):
             res = client.post("/chat", json={"message": "Why?", "recommendationId": "session-1-107000"})
         self.assertEqual(res.status_code, 200)
 
+    def ask_more_cover(self, family, message, more_cover):
+        rec_id = client.post("/recommend", json={"family": family}).json()["id"]
+        reply = {"reply": "Mohan has ₹35L of cover.", "citations": [], "more_cover": more_cover}
+        with mock.patch.object(app.llm, "ask_json", return_value=reply):
+            return client.post("/chat", json={"message": message, "recommendationId": rec_id}).json()
+
+    def test_quotes_more_cover_from_the_solver(self):
+        body = self.ask_more_cover(DEMO, "Give my father 50 lakh", {"member": "mohan", "amount": 5000000})
+        mohan = next(m for m in body["proposal"]["family"]["members"] if m["id"] == "mohan")
+        self.assertEqual(mohan["minCover"], 5000000)
+        self.assertGreaterEqual(body["proposal"]["memberCover"]["mohan"], 5000000)
+        premium = body["proposal"]["premium"]
+        self.assertIn(solver.inr(premium), body["reply"])
+        self.assertIn("illustrative", body["reply"])
+        self.assertEqual(body["quickReplies"], ["Yes, update my mix", "No, keep this mix"])
+
+    def test_raises_the_budget_when_the_quote_is_over_it(self):
+        body = self.ask_more_cover(dict(DEMO, budget=107000), "Give Mohan 1 crore", {"member": "mohan", "amount": 10000000})
+        self.assertGreater(body["proposal"]["family"]["budget"], 107000)
+        self.assertEqual(body["proposal"]["family"]["budget"], body["proposal"]["premium"])
+        self.assertIn("over your ₹1,07,000 budget", body["reply"])
+
+    def test_amount_the_user_never_said_becomes_twice_their_cover(self):
+        body = self.ask_more_cover(DEMO, "I need more cover for my father", {"member": "mohan", "amount": 9900000})
+        mohan = next(m for m in body["proposal"]["family"]["members"] if m["id"] == "mohan")
+        self.assertEqual(mohan["minCover"], 2 * 3500000)
+
+    def test_knows_father_in_hindi(self):
+        body = self.ask_more_cover(DEMO, "pitaji ke liye zyada cover chahiye", {"member": "mohan", "amount": None})
+        self.assertIn("proposal", body)
+
+    def test_no_quote_when_the_member_is_not_mentioned(self):
+        body = self.ask_more_cover(DEMO, "What are the catches?", {"member": "mohan", "amount": None})
+        self.assertNotIn("proposal", body)
+        self.assertEqual(body["reply"], "Mohan has ₹35L of cover.")
+
+    def test_says_so_when_no_plan_goes_that_high(self):
+        body = self.ask_more_cover(DEMO, "Give Mohan 5 crore", {"member": "mohan", "amount": 50000000})
+        self.assertNotIn("proposal", body)
+        self.assertIn("No mix of plans in our list can give Mohan ₹5 crore", body["reply"])
+
     def test_unknown_recommendation_is_a_404(self):
         self.assertEqual(client.post("/chat", json={"message": "hi", "recommendationId": "rec-x"}).status_code, 404)
 

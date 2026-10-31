@@ -115,5 +115,31 @@ class Formatting(unittest.TestCase):
         self.assertEqual(solver.inr(950), "₹950")
 
 
+
+class MinCover(unittest.TestCase):
+    def with_min_cover(self, amount, budget=None):
+        family = FAMILIES["demo-pune"]
+        members = [dict(m, min_cover=amount) if m["id"] == "mohan" else m for m in family["members"]]
+        return dict(family, members=members, budget=budget or family["budget"])
+
+    def test_gives_the_member_at_least_the_cover_asked_for(self):
+        result = solver.solve(self.with_min_cover(50 * solver.LAKH, budget=200000), POLICIES)
+        self.assertEqual(result["status"], "ok")
+        self.assertGreaterEqual(result["member_cover"]["mohan"], 50 * solver.LAKH)
+
+    def test_no_fit_says_the_budget_needed(self):
+        family = self.with_min_cover(100 * solver.LAKH, budget=80000)
+        result = solver.solve(family, POLICIES)
+        self.assertEqual(result["status"], "no_fit")
+        again = solver.solve(dict(family, budget=result["budget_needed"]), POLICIES)
+        self.assertEqual(again["status"], "ok")
+        self.assertEqual(solver.solve(dict(family, budget=result["budget_needed"] - 1), POLICIES)["status"], "no_fit")
+
+    def test_no_budget_needed_when_no_plan_goes_that_high(self):
+        result = solver.solve(self.with_min_cover(500 * solver.LAKH), POLICIES)
+        self.assertEqual(result["status"], "no_fit")
+        self.assertIsNone(result["budget_needed"])
+
+
 if __name__ == "__main__":
     unittest.main()

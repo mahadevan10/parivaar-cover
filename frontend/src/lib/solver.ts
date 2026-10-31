@@ -7,7 +7,7 @@ export type SolverFamily = {
   id: string;
   city?: string;
   budget?: number;
-  members: { id: string; name: string; age?: number; relation?: string; conditions: string[] }[];
+  members: { id: string; name: string; age?: number; relation?: string; conditions: string[]; min_cover?: number }[];
   office_cover: { members: string[]; sum_insured: number }[];
 };
 
@@ -80,6 +80,7 @@ export function toSolverFamily(family: FamilyProfile, id: string): SolverFamily 
       age: m.age,
       relation: m.relation && SPOUSE.has(m.relation) ? "spouse" : m.relation,
       conditions: m.conditions,
+      min_cover: m.minCover ?? undefined,
     })),
     office_cover: family.officeCover
       ? [{ members: family.officeCover.memberIds, sum_insured: family.officeCover.amount }]

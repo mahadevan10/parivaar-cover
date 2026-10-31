@@ -9,6 +9,8 @@ export type Member = {
   relation?: string;
   age?: number;
   conditions: string[];
+  /** Least cover the user asked for this member, in rupees. The solver must meet it. */
+  minCover?: number;
   /** The words this member's details were heard from, shown so the user can check them. */
   heardFrom?: string;
 };
@@ -53,6 +55,8 @@ export type ChatResponse = {
   readyToOptimise: boolean;
   /** Policy ids the reply relies on. The UI shows them as tappable fine-print chips. */
   citations?: string[];
+  /** A quoted change to the mix, e.g. more cover for one member. Re-run the solver on this family if the user agrees. */
+  proposal?: { family: FamilyProfile; premium: number };
 };
 
 export type PolicyKind = "floater" | "individual" | "senior" | "super_topup";

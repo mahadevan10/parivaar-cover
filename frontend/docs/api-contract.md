@@ -84,6 +84,12 @@ Response:
 - The user can edit the board directly, so treat the request's `family` as the latest truth and return a full updated copy. Keep member ids stable.
 - `heardFrom` is the phrase the details came from. Optional.
 - `citations` are `policy_id`s from the current solution. The UI turns them into "fine print" chips.
+- `minCover` on a member is the least cover the user asked for them, in rupees. It is sent to `/recommend` as `min_cover`.
+- `proposal` comes back after a recommendation when the user asks for more cover for someone, e.g. "more cover for my father". The solver prices it and the reply quotes it, with the quick replies "Yes, update my mix" and "No, keep this mix". On yes, the UI takes `proposal.family` (with `minCover` set, and the budget raised if the quote went over it) and runs `/recommend` again.
+
+```json
+"proposal": { "family": FamilyProfile, "premium": 51300, "memberCover": { "father": 1000000 } }
+```
 
 ## CORS
 

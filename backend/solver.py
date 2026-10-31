@@ -101,14 +101,20 @@ def office_cover(family):
     return cover
 
 
+def min_lakhs(member):
+    """Cover the user asked for this member, in whole lakhs. Zero if they asked for none."""
+    return -(-(member.get("min_cover") or 0) // LAKH)
+
+
 def target_lakhs(member):
-    return TARGET_LAKHS_60_PLUS if member["age"] >= 60 else TARGET_LAKHS_UNDER_60
+    return max(TARGET_LAKHS_60_PLUS if member["age"] >= 60 else TARGET_LAKHS_UNDER_60, min_lakhs(member))
 
 
-def optimise(family, cands, forbid=None):
+def optimise(family, cands, forbid=None, cheapest=False):
     """Indices of the best candidates to buy, or None when nothing fits the budget.
 
     forbid rules out one candidate, which shows what the solver would pick without it.
+    cheapest ignores the budget and finds the lowest premium that meets every rule.
     """
     office = office_cover(family)
     model = cp_model.CpModel()
@@ -129,6 +135,8 @@ def optimise(family, cands, forbid=None):
         model.Add(sum(x[i] for i in topups) <= 1)
 
         cover = office[mid] // LAKH + sum(cands[i]["policy"]["sum_insured"] // LAKH * x[i] for i in bases + topups)
+        if min_lakhs(m):
+            model.Add(cover >= min_lakhs(m))
         counted = model.NewIntVar(0, target_lakhs(m), f"counted_{mid}")
         model.Add(counted <= cover)
         objective.append(VALUE_PER_LAKH * counted)
@@ -145,11 +153,15 @@ def optimise(family, cands, forbid=None):
                       if cands[j]["policy"]["sum_insured"] + office[mid] >= deductible]
             model.Add(x[i] <= sum(x[j] for j in enough))
 
-    model.Add(sum(c["premium"] * x[i] for i, c in enumerate(cands)) <= family["budget"])
+    premium = sum(c["premium"] * x[i] for i, c in enumerate(cands))
     if forbid is not None:
         model.Add(x[forbid] == 0)
-    objective += [-(c["premium"] + c["penalty"]) * x[i] for i, c in enumerate(cands)]
-    model.Maximize(sum(objective))
+    if cheapest:
+        model.Minimize(premium)
+    else:
+        model.Add(premium <= family["budget"])
+        objective += [-(c["premium"] + c["penalty"]) * x[i] for i, c in enumerate(cands)]
+        model.Maximize(sum(objective))
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 10
@@ -165,6 +177,7 @@ def solve(family, policies=None):
     chosen = optimise(family, cands)
     if chosen is None:
         return {"status": "no_fit", "family_id": family["id"], "budget": family["budget"],
+                "budget_needed": budget_needed(family, cands),
                 "message": "No mix covers everyone within this budget."}
 
     picks = [dict(pick_out(cands[i]), reasons=reasons_for(family, cands, chosen, i)) for i in chosen]
@@ -184,6 +197,12 @@ def solve(family, policies=None):
         "saving_vs_usual": usual["premium"] - total if usual else None,
         "vs_usual": vs_usual(family, picks, usual),
     }
+
+
+def budget_needed(family, cands):
+    """Lowest yearly premium that covers everyone with the cover asked for, or None if no mix can."""
+    chosen = optimise(family, cands, cheapest=True)
+    return None if chosen is None else sum(cands[i]["premium"] for i in chosen)
 
 
 def pick_out(c):

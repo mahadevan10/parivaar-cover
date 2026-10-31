@@ -54,6 +54,8 @@ export function App() {
   const [openPolicy, setOpenPolicy] = useState<string | null>(null);
   const [changed, setChanged] = useState<Set<string>>(new Set());
   const [mobileView, setMobileView] = useState<"chat" | "board">("chat");
+  // A change to the mix the chat has quoted, waiting for the user to say yes.
+  const [proposal, setProposal] = useState<FamilyProfile | null>(null);
 
   const familyRef = useRef(family);
   useEffect(() => {
@@ -62,6 +64,7 @@ export function App() {
 
   const applyFamily = useCallback((next: FamilyProfile) => {
     setChanged(diffFamily(familyRef.current, next));
+    familyRef.current = next;
     setFamily(next);
   }, []);
 
@@ -129,6 +132,19 @@ export function App() {
       return;
     }
 
+    if (proposal && /^(yes, update my mix|no, keep this mix)$/i.test(text.trim())) {
+      push({ role: "user", text, via: meta.via, language: meta.language });
+      setProposal(null);
+      if (/^yes/i.test(text.trim())) {
+        applyFamily(proposal);
+        void findMix();
+      } else {
+        push({ role: "assistant", text: "Okay, your mix stays as it is." });
+        setQuickReplies([]);
+      }
+      return;
+    }
+
     const history = messages.map(({ role, text }) => ({ role, text }));
     push({ role: "user", text, via: meta.via, language: meta.language });
     setQuickReplies([]);
@@ -145,6 +161,7 @@ export function App() {
       setMissing(res.missing);
       setReady(res.readyToOptimise);
       setQuickReplies(res.quickReplies);
+      setProposal(res.proposal?.family ?? null);
       push({ role: "assistant", text: res.reply, citations: res.citations });
     } catch {
       push({
@@ -157,7 +174,7 @@ export function App() {
     } finally {
       setLoading(false);
     }
-  }, [messages, rec, ready, applyFamily, findMix]);
+  }, [messages, rec, ready, proposal, applyFamily, findMix]);
 
   // Board edits are local. Recheck what's missing straight away.
   const editFamily = (next: FamilyProfile) => {

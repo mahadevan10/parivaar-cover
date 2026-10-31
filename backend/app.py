@@ -44,6 +44,7 @@ class Member(BaseModel):
     age: int = Field(ge=0, le=120)
     relation: str | None = None
     conditions: list[str] = []
+    min_cover: int | None = Field(None, gt=0)  # cover the user asked for this member, in rupees
 
 
 class OfficeCover(BaseModel):
@@ -68,6 +69,7 @@ class DraftMember(BaseModel):
     age: int | None = Field(None, ge=0, le=120)
     relation: str | None = None
     conditions: list[str] = []
+    min_cover: int | None = Field(None, gt=0)
     heard_from: str | None = None
 
 
@@ -214,8 +216,14 @@ All premiums are illustrative. Policy year 1 is the first year after buying, so 
 Facts, as JSON:
 {facts}
 
+If the user asks for more cover, or a set amount of cover, for one family member, fill in more_cover.
+The app then asks the solver for a new mix and writes the reply itself, so do not quote a price.
+
 Return only a JSON object:
-{{"reply": "your answer", "citations": [policy ids from the facts that your answer relies on]}}
+{{"reply": "your answer", "citations": [policy ids from the facts that your answer relies on],
+  "more_cover": {{"member": member id from the facts, "amount": rupees as an integer if the user said
+                 an amount, else null}} or null}}
+Convert lakh and crore amounts to rupees: 10 lakh is 1000000, 1 crore is 10000000.
 """ + STYLE
 
 
@@ -226,7 +234,14 @@ def chat(req: ChatRequest):
         rec = store.recommendation(req.recommendation_id)
         if rec is None:
             raise HTTPException(404, "Recommendation not found. Run /recommend again.")
-        out = call_llm(EXPLAIN_PROMPT.format(facts=json.dumps(explain_facts(rec), ensure_ascii=False)), history)
+        solved_for = store.recommendation_family(req.recommendation_id)
+        facts = dict(explain_facts(rec), members=[{k: m[k] for k in ("id", "name", "relation")}
+                                                  for m in solved_for["members"]])
+        out = call_llm(EXPLAIN_PROMPT.format(facts=json.dumps(facts, ensure_ascii=False)), history)
+        quote = more_cover_quote(out.get("more_cover"), req.message, solved_for, rec["solution"], req.family)
+        if quote:
+            remember(req.session_id, req.message, quote["reply"])
+            return quote
         solution = rec["solution"]
         known = {p["policy_id"] for p in solution.get("picks", [])}
         if solution.get("usual_pick"):
@@ -265,6 +280,80 @@ def chat(req: ChatRequest):
             "quickReplies": quick_replies(family, missing), "readyToOptimise": not missing}
 
 
+def lakhs(amount):
+    """Cover the way the UI shows it: ₹10L, or ₹1.2 crore from one crore up."""
+    if amount >= 100 * solver.LAKH:
+        return f"₹{amount / (100 * solver.LAKH):.2f}".rstrip("0").rstrip(".") + " crore"
+    return f"₹{amount / solver.LAKH:g}L"
+
+
+def said_amount(text, amount):
+    """True if the user's message has this amount in lakh, crore or rupees."""
+    numbers = {str(amount), f"{amount / solver.LAKH:g}", f"{amount / (100 * solver.LAKH):g}"}
+    return any(has_word(text.replace(",", ""), n) for n in numbers)
+
+
+def more_cover_quote(ask, message, family, solution, profile):
+    """What a mix with more cover for one member costs, worked out by the solver.
+
+    The LLM only says who the user asked about, and the amount if they said one. Every number here
+    comes from the solver, and the reply is written in code. Returns None when there is nothing to quote.
+    """
+    if not isinstance(ask, dict) or solution["status"] != "ok":
+        return None
+    member = next((m for m in family["members"] if m["id"] == ask.get("member")), None)
+    english = with_digits(llm.to_english(message).lower())
+    if member is None or not mentions(english, member):
+        return None
+    name, now = member["name"], solution["member_cover"][member["id"]]
+    amount = as_int(ask.get("amount"))
+    if not amount or not said_amount(english, amount):
+        amount = 2 * now  # no amount said: offer twice what they have
+    amount = -(-amount // solver.LAKH) * solver.LAKH
+    reply = {"family": profile, "missing": [], "readyToOptimise": True, "citations": [], "quickReplies": []}
+    if amount <= now:
+        return dict(reply, reply=f"{name} already has {lakhs(now)} of cover in your mix.")
+
+    def solve(floors):
+        wanted = dict(family, members=[dict(m, min_cover=floors[m["id"]]) if m["id"] in floors else m
+                                       for m in family["members"]])
+        new = solver.solve(wanted, POLICIES)
+        if new["status"] != "ok" and new["budget_needed"]:
+            wanted["budget"] = new["budget_needed"]
+            new = solver.solve(wanted, POLICIES)
+        return wanted, new
+
+    wanted, new = solve({member["id"]: amount})
+    cover = solution["member_cover"]
+    if new["status"] == "ok" and any(new["member_cover"][mid] < cover[mid] for mid in cover):
+        # Nobody else should lose cover to pay for this, so keep what they have
+        wanted, new = solve(dict({mid: cover[mid] for mid in cover}, **{member["id"]: amount}))
+    if new["status"] != "ok":
+        return dict(reply, reply=f"No mix of plans in our list can give {name} {lakhs(amount)} of cover.")
+    floors = {m["id"]: m["min_cover"] for m in wanted["members"] if m.get("min_cover")}
+
+    change = new["total_premium"] - solution["total_premium"]
+    got = new["member_cover"][member["id"]]
+    lines = [f"{name} can have {lakhs(got)} of cover." if got == amount else
+             f"No mix gives {name} exactly {lakhs(amount)}. The closest gives {lakhs(got)} of cover.",
+             f"Your mix becomes {len(new['picks'])} policies at {solver.inr(new['total_premium'])} a year"
+             + (f", {solver.inr(abs(change))} {'more' if change > 0 else 'less'} than now." if change else ", the same as now.")]
+    if wanted["budget"] > family["budget"]:
+        lines.append(f"That is {solver.inr(wanted['budget'] - family['budget'])} over your "
+                     f"{solver.inr(family['budget'])} budget, so your budget would go up to {solver.inr(wanted['budget'])}.")
+    else:
+        lines.append(f"That fits your {solver.inr(family['budget'])} budget.")
+    if len(floors) > 1:
+        lines.append("Everyone else keeps at least the cover they have now.")
+    lines.append("Premiums are illustrative. Shall I update your mix?")
+
+    base = profile if profile.get("members") else to_profile(dict(family, health_checked=True, office_checked=True))
+    proposed = dict(base, budget=wanted["budget"], members=[dict(m, minCover=floors[m["id"]]) if m["id"] in floors else m
+                                                            for m in base["members"]])
+    return dict(reply, reply=" ".join(lines), quickReplies=["Yes, update my mix", "No, keep this mix"],
+                proposal={"family": proposed, "premium": new["total_premium"], "memberCover": new["member_cover"]})
+
+
 def remember(session_id, message, reply, english=None):
     """Stores both sides of a chat turn. Turns without a session id are not stored."""
     if session_id:
@@ -278,7 +367,8 @@ def from_profile(p):
     return {
         "city": p.get("city"), "budget": p.get("budget"),
         "members": [{"id": m.get("id"), "name": m.get("name"), "age": m.get("age"), "relation": m.get("relation"),
-                     "conditions": m.get("conditions") or [], "heard_from": m.get("heardFrom")}
+                     "conditions": m.get("conditions") or [], "min_cover": m.get("minCover"),
+                     "heard_from": m.get("heardFrom")}
                     for m in p.get("members") or []],
         "office_cover": [{"members": office.get("memberIds") or [], "sum_insured": office.get("amount")}] if office else [],
         "health_checked": p.get("healthChecked", False), "office_checked": p.get("officeChecked", False),
@@ -289,7 +379,8 @@ def to_profile(f):
     office = f["office_cover"][0] if f["office_cover"] else None
     profile = {
         "members": [{"id": m["id"], "name": m["name"], "relation": m["relation"], "age": m["age"],
-                     "conditions": m["conditions"], "heardFrom": m.get("heard_from")} for m in f["members"]],
+                     "conditions": m["conditions"], "minCover": m.get("min_cover"),
+                     "heardFrom": m.get("heard_from")} for m in f["members"]],
         "city": f["city"], "budget": f["budget"],
         "healthChecked": f["health_checked"], "officeChecked": f["office_checked"],
     }
@@ -393,6 +484,7 @@ def clean_family(raw, previous):
         age = as_int(m.get("age"))
         members.append({"id": mid, "name": name, "age": age if age is not None and 0 <= age <= 120 else None,
                         "relation": m.get("relation"), "conditions": conditions,
+                        "min_cover": m.get("min_cover") or old.get("min_cover"),
                         "heard_from": m.get("heard_from") or old.get("heard_from")})
     office = []
     for oc in raw.get("office_cover") or []:
@@ -414,8 +506,8 @@ def clean_family(raw, previous):
 RELATION_WORDS = {
     "self": ["i", "me", "i'm", "myself"],
     "spouse": ["wife", "husband", "spouse"],
-    "father": ["father", "dad", "papa", "appa"],
-    "mother": ["mother", "mom", "mum", "mummy", "amma", "maa"],
+    "father": ["father", "dad", "papa", "appa", "pitaji", "pita", "baba", "achan"],
+    "mother": ["mother", "mom", "mum", "mummy", "amma", "maa", "mataji", "mata"],
     "son": ["son", "children", "child", "kids"], "daughter": ["daughter", "children", "child", "kids"],
 }
 # Translated messages often spell numbers out: "my wife is twenty-three"
