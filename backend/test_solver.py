@@ -60,6 +60,19 @@ class DemoFamily(unittest.TestCase):
         self.assertFalse(usual["covered"])
         self.assertEqual(usual["covered_from_year"], 4)
 
+    def test_hospital_stay_in_year_1(self):
+        for picks in (self.result["picks"], [self.result["usual_pick"]]):
+            check = solver.claim_check(self.family, picks, "rahul", 300000, 1)
+            self.assertTrue(check["covered"])
+            self.assertEqual(check["payable"], 300000)
+            self.assertEqual(check["covered_from_year"], 1)
+
+    def test_listed_illness_waits_2_years(self):
+        for year, covered in ((1, False), (2, False), (3, True)):
+            check = solver.claim_check(self.family, self.result["picks"], "lata", 300000, year, None, "knee")
+            self.assertEqual(check["covered"], covered, year)
+            self.assertEqual(check["covered_from_year"], 3 if not covered else year)
+
 
 class OtherFamilies(unittest.TestCase):
     def check_valid(self, family_id):

@@ -29,6 +29,9 @@ ROOM_RENT_CAP = 3000            # a capped room rent, per member
 # The usual pick may stretch the budget a little, the way an agent's pitch does.
 USUAL_PICK_BUDGET_STRETCH = 1.1
 
+# Treatments that fall under a policy's specific illness wait, as listed in the wordings.
+LISTED_ILLNESSES = {"cataract", "hernia", "knee", "joint_replacement", "gallstones", "piles", "sinus", "tonsils"}
+
 
 def load_policies():
     return json.loads((SHARED / "policies.json").read_text())["policies"]
@@ -410,11 +413,16 @@ def claim_check(family, picks, member_id, amount, policy_year, related_condition
     policies = {p["id"]: p for p in load_policies()}
     member = next(m for m in family["members"] if m["id"] == member_id)
     conditions = [related_condition] if related_condition in member["conditions"] else []
-    months_in_force = (policy_year - 1) * 12
     notes, payable, wait_left = [], 0, 0
 
     def waits_for(policy):
-        return max(condition_wait(policy, conditions), policy["waiting_periods_months"]["initial"])
+        waits = policy["waiting_periods_months"]
+        listed = waits["specific_illness"] if treatment in LISTED_ILLNESSES else 0
+        return max(condition_wait(policy, conditions), waits["initial"], listed)
+
+    def first_year(wait):
+        """A wait of under a year ends inside year 1, 12 months ends at the start of year 2, and so on."""
+        return wait // 12 + 1
 
     mine = [p for p in picks if member_id in p["members"]]
     base = next((p for p in mine if p["plan_type"] != "super_topup"), None)
@@ -423,7 +431,7 @@ def claim_check(family, picks, member_id, amount, policy_year, related_condition
     if base:
         policy = policies[base["policy_id"]]
         wait = waits_for(policy)
-        if months_in_force >= wait:
+        if policy_year >= first_year(wait):
             paid = min(amount, base["sum_insured"])
             copay = paid * base["copay_percent"] // 100
             payable += paid - copay
@@ -431,7 +439,7 @@ def claim_check(family, picks, member_id, amount, policy_year, related_condition
                 notes.append(f"{base['product']} pays after a {base['copay_percent']}% co-pay of {inr(copay)}.")
         else:
             wait_left = max(wait_left, wait)
-            notes.append(f"{base['product']} covers this only from year {wait // 12 + 1}.")
+            notes.append(f"{base['product']} covers this only from year {first_year(wait)}.")
         for sub in policy["sub_limits"]:
             if treatment and sub["item"] == treatment:
                 notes.append(sub["text"])
@@ -439,16 +447,16 @@ def claim_check(family, picks, member_id, amount, policy_year, related_condition
     if topup and amount > topup["deductible"]:
         policy = policies[topup["policy_id"]]
         wait = waits_for(policy)
-        if months_in_force >= wait:
+        if policy_year >= first_year(wait):
             payable += min(amount - topup["deductible"], topup["sum_insured"])
         else:
-            notes.append(f"{topup['product']} covers this only from year {wait // 12 + 1}.")
+            notes.append(f"{topup['product']} covers this only from year {first_year(wait)}.")
 
     payable = min(payable, amount)
     return {
         "member_id": member_id, "amount": amount, "policy_year": policy_year,
         "covered": payable > 0, "payable": payable, "out_of_pocket": amount - payable,
-        "covered_from_year": wait_left // 12 + 1 if wait_left else policy_year,
+        "covered_from_year": first_year(wait_left) if wait_left else policy_year,
         "notes": notes,
     }
 
