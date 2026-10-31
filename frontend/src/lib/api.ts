@@ -2,7 +2,7 @@
 // the mock so the UI can be built and demoed on its own.
 
 import type { ChatRequest, ChatResponse, FamilyProfile, Recommendation } from "./types";
-import { toRecommendation, toSolverFamily, type SolverClaimSeries, type SolverOutput } from "./solver";
+import { claimsFor, toRecommendation, toSolverFamily, type SolverClaimSeries, type SolverOutput } from "./solver";
 import { createMockChat } from "./mock/chat";
 import { demoRecommendationFor } from "./mock/demo";
 
@@ -34,9 +34,10 @@ export async function getRecommendation(family: FamilyProfile, sessionId: string
     await new Promise((r) => setTimeout(r, 300));
     return demoRecommendationFor(family);
   }
+  const solverFamily = toSolverFamily(family, sessionId);
   const { id, solution, claim_checks } = await post<{ id?: string; solution: SolverOutput; claim_checks?: SolverClaimSeries[] }>(
     "/recommend",
-    { family: toSolverFamily(family, sessionId) },
+    { family: solverFamily, claims: claimsFor(solverFamily) },
   );
   if (solution.status !== "ok") throw new NoFitError("No mix fits this budget.");
   return toRecommendation(solution, claim_checks, id);

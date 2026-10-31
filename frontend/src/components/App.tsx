@@ -73,26 +73,16 @@ export function App() {
 
   const push = (m: Omit<ChatMessage, "id">) => setMessages((prev) => [...prev, { ...m, id: nextId() }]);
 
+  // The solver's answer waits here until the optimise screen has ticked every step.
+  const [pending, setPending] = useState<Recommendation | null>(null);
+
   const findMix = useCallback(async () => {
     setMobileView("board");
     setQuickReplies([]);
+    setPending(null);
     setStage("fine_print");
-    const toOptimise = setTimeout(() => setStage("optimise"), 1300);
     try {
-      const [result] = await Promise.all([
-        getRecommendation(familyRef.current, sessionId()),
-        new Promise((r) => setTimeout(r, 2700)),
-      ]);
-      setRec(result);
-      setStage("explain");
-      const usualLine = result.usual
-        ? `The usual pick is one floater at ${rupees(result.usual.premium)} for ${cover(result.usual.totalCover)}.`
-        : "No single floater can take your whole family.";
-      push({
-        role: "assistant",
-        text: `Here is your mix. ${result.mix.policies.length} policies for ${rupees(result.mix.premium)} a year with ${cover(result.mix.totalCover)} of total cover. ${usualLine} Premiums are illustrative. Ask me about any pick, or try the claim check.`,
-      });
-      setQuickReplies(["Why not one floater?", "What is a super top-up?", "What are the catches?"]);
+      setPending(await getRecommendation(familyRef.current, sessionId()));
     } catch (e) {
       console.error("Find my mix failed", e);
       setStage("talk");
@@ -103,10 +93,25 @@ export function App() {
           : "I couldn't reach the optimiser just now. Please try again.",
       });
       setQuickReplies(["Find my mix"]);
-    } finally {
-      clearTimeout(toOptimise);
     }
   }, []);
+
+  const finePrintRead = useCallback(() => setStage("optimise"), []);
+
+  const showResult = useCallback(() => {
+    if (!pending) return;
+    setRec(pending);
+    setPending(null);
+    setStage("explain");
+    const usualLine = pending.usual
+      ? `The usual pick is one floater at ${rupees(pending.usual.premium)} for ${cover(pending.usual.totalCover)}.`
+      : "No single floater can take your whole family.";
+    push({
+      role: "assistant",
+      text: `Here is your mix. ${pending.mix.policies.length} policies for ${rupees(pending.mix.premium)} a year with ${cover(pending.mix.totalCover)} of total cover. ${usualLine} Premiums are illustrative. Ask me about any pick, or try the claim check.`,
+    });
+    setQuickReplies(["Why not one floater?", "What is a super top-up?", "What are the catches?"]);
+  }, [pending]);
 
   const send = useCallback(async (text: string, meta: SendMeta) => {
     if (/^find my mix[.!]?$/i.test(text.trim()) && ready && !rec) {
@@ -179,7 +184,12 @@ export function App() {
   const policyNames = Object.fromEntries(Object.values(policies).map((p) => [p.id, p.product]));
   const canvas =
     stage === "fine_print" || stage === "optimise" ? (
-      <Optimising memberCount={family.members.length} />
+      <Optimising
+        memberCount={family.members.length}
+        finished={pending !== null}
+        onFinePrintRead={finePrintRead}
+        onComplete={showResult}
+      />
     ) : rec && stage === "explain" ? (
       <Results rec={rec} family={family} onOpenPolicy={setOpenPolicy} onEditFamily={backToFamily} />
     ) : (

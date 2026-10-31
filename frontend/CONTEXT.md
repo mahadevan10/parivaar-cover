@@ -2,13 +2,15 @@
 
 Living notes for the chat and voice UI. Updated by `/update-context`. Newest status first.
 
-_Last updated: 2026-10-31, branch `fe/voice-conversation` (replies read aloud, talk mode, session language; latest `main` merged in)._
+_Last updated: 2026-10-31, branch `main` (voice conversation merged in #13)._
 
 ## Status
 
-- `fe/voice-conversation` adds replies read aloud (Sarvam text-to-speech via `/api/tts`), a hands-free talk mode and a sticky session language for speech-to-text. `/api/tts` was checked with one request and returns Hindi audio. Talk mode and the pause detection still need a browser test.
+- Replies are read aloud (Sarvam text-to-speech via `/api/tts`), with a hands-free talk mode and a sticky session language for speech-to-text. Merged in #13.
+- The optimise screen now follows the real request. "Testing combinations" keeps spinning until `/recommend` answers, then the last two checks tick, a "Done" line shows, and the results open. After 6 seconds a "Still working" note appears. Tested in the browser: the demo family takes 3.5 seconds end to end; a family of 8 took about 61 seconds and waited correctly.
+- Fixed a duplicate React key warning when the mix holds the same product twice (big families get two Super Surplus Gold top-ups).
 - Voice input works in the browser after #10 (Chrome's `audio/webm;codecs=opus` type is stripped to the bare type).
-- A Hindi voice message got an English reply when the app ran on the mock, whose replies are fixed English templates. The backend `/chat` prompt replies in the user's language.
+- The mock's replies are fixed English templates. The backend `/chat` prompt replies in the user's language.
 - The mock now knows माता and पिता. It still has no sister or brother relation.
 - Families with no single floater now work. When a parent is past the floaters' entry age (Mohan at 70, say), the backend sends `usual_pick: null`. The UI shows the mix with a "No single floater fits" card. Tested in the browser.
 - The dev page works at `127.0.0.1:3000` and from phones on the same Wi-Fi (`allowedDevOrigins` in `next.config.ts`). The backend CORS allows the same origins (backend #11).
@@ -41,13 +43,14 @@ _Last updated: 2026-10-31, branch `fe/voice-conversation` (replies read aloud, t
 | Strip the codec suffix from the audio type in `/api/stt` | Sarvam rejects `audio/webm;codecs=opus`, which is what Chrome records. |
 | Demo family loads in the browser; offline message if `/chat` fails | The demo must not depend on the LLM being up. |
 | `usual` and `saving` on `Recommendation` are nullable; no made-up comparison when no single floater fits | The solver has nothing to compare with, and inventing a usual pick would show a fake price. |
+| Optimise steps are paced by the real `/recommend` call; the solver's answer is held in `pending` until every step ticks | The old fixed timer ticked everything in 2.4 seconds, then sat still while big families took up to a minute. |
 | Condition names follow `shared/README.md` (`hypertension`, `heart_disease`); the UI shows friendly labels | The solver matches conditions by name. |
 
 ## Next
 
-1. Test `fe/voice-conversation` in the browser: replies read aloud, talk mode, pause detection in a noisy room, Hindi and Hinglish with the real backend. Then merge it.
+1. Tune talk mode after more browser use: pause detection in a noisy room, Hindi and Hinglish with the real backend.
 2. Rewrite the demo script for real numbers: Mohan's year 2 heart claim is partly covered (₹1,80,000 co-pay).
-3. Demo polish: phone layout, timing of the optimise animation.
+3. Demo polish: phone layout.
 4. Whenever `backend/solver.py` changes, rerun `python3 frontend/scripts/gen_claim_checks.py` so the mock matches.
 
 ## Open questions
@@ -56,7 +59,7 @@ _Last updated: 2026-10-31, branch `fe/voice-conversation` (replies read aloud, t
 - Should `/chat` take the spoken language, so mixed Hindi and English input gets a Hindi reply? Needs a contract change with the backend.
 - Sister and brother relations: does the solver accept them?
 - Unknown health conditions: suggested the backend treats them as a general pre-existing condition. Backend's call.
-- Families of 8 or more take about 18 seconds in `/recommend` (7 take about 3). The optimise screen just waits. Fine for the demo family; worth a timeout message if we show bigger families.
+- Families of 8 can take about a minute in `/recommend` (the demo family plus people aged 40, 12 and 58 took 61 seconds; the backend runs CP-SAT at full CPU). The UI now says it is still working, but there is no timeout or cancel. Worth asking the backend for a solver time limit.
 
 ## Run
 

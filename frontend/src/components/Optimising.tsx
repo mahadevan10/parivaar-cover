@@ -9,16 +9,42 @@ const STEPS = [
   "Running claim checks for each family member",
 ];
 
+// Big families can keep the solver busy for close to a minute.
+const SLOW_AFTER_MS = 6000;
+
+type Props = {
+  memberCount: number;
+  /** True once the solver has answered. The solver step waits for it. */
+  finished: boolean;
+  onFinePrintRead: () => void;
+  /** Called after every step has ticked. */
+  onComplete: () => void;
+};
+
 /** Shows the solver's steps while the recommendation loads. */
-export function Optimising({ memberCount }: { memberCount: number }) {
+export function Optimising({ memberCount, finished, onFinePrintRead, onComplete }: Props) {
   const [done, setDone] = useState(0);
+  const [slow, setSlow] = useState(false);
+
   useEffect(() => {
-    const t = setInterval(() => setDone((d) => Math.min(d + 1, STEPS.length)), 800);
-    return () => clearInterval(t);
-  }, []);
+    if (done === 1 && !finished) return; // still waiting on the solver
+    const delay = [1200, 700, 500, 600][done];
+    const t = setTimeout(() => {
+      if (done === STEPS.length) return onComplete();
+      if (done === 0) onFinePrintRead();
+      setDone(done + 1);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [done, finished, onFinePrintRead, onComplete]);
+
+  useEffect(() => {
+    if (finished) return;
+    const t = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [finished]);
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-5 p-6 pt-16" aria-live="polite">
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-5 p-6 pt-16" aria-live="polite" aria-busy={done < STEPS.length}>
       <div>
         <h2 className="text-lg font-semibold text-navy">Finding the best mix for {memberCount} people</h2>
         <p className="text-sm text-muted">The solver picks the policies. I only explain them.</p>
@@ -33,6 +59,10 @@ export function Optimising({ memberCount }: { memberCount: number }) {
           </li>
         ))}
       </ol>
+      {slow && !finished && (
+        <p className="text-sm text-muted">Still working. A family of {memberCount} has many more combinations to test, so this can take a minute.</p>
+      )}
+      {done === STEPS.length && <p className="text-sm font-medium text-navy">Done. Here is your mix.</p>}
     </div>
   );
 }

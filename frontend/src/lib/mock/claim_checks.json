@@ -324,5 +324,105 @@
     }
    }
   ]
+ },
+ {
+  "id": "aarav-dengue",
+  "member_id": "aarav",
+  "label": "Dengue hospital stay",
+  "amount": 150000,
+  "by_year": [
+   {
+    "policy_year": 1,
+    "mix": {
+     "member_id": "aarav",
+     "amount": 150000,
+     "policy_year": 1,
+     "covered": true,
+     "payable": 150000,
+     "out_of_pocket": 0,
+     "covered_from_year": 1,
+     "notes": []
+    },
+    "usual": {
+     "member_id": "aarav",
+     "amount": 150000,
+     "policy_year": 1,
+     "covered": true,
+     "payable": 150000,
+     "out_of_pocket": 0,
+     "covered_from_year": 1,
+     "notes": []
+    }
+   },
+   {
+    "policy_year": 2,
+    "mix": {
+     "member_id": "aarav",
+     "amount": 150000,
+     "policy_year": 2,
+     "covered": true,
+     "payable": 150000,
+     "out_of_pocket": 0,
+     "covered_from_year": 2,
+     "notes": []
+    },
+    "usual": {
+     "member_id": "aarav",
+     "amount": 150000,
+     "policy_year": 2,
+     "covered": true,
+     "payable": 150000,
+     "out_of_pocket": 0,
+     "covered_from_year": 2,
+     "notes": []
+    }
+   },
+   {
+    "policy_year": 3,
+    "mix": {
+     "member_id": "aarav",
+     "amount": 150000,
+     "policy_year": 3,
+     "covered": true,
+     "payable": 150000,
+     "out_of_pocket": 0,
+     "covered_from_year": 3,
+     "notes": []
+    },
+    "usual": {
+     "member_id": "aarav",
+     "amount": 150000,
+     "policy_year": 3,
+     "covered": true,
+     "payable": 150000,
+     "out_of_pocket": 0,
+     "covered_from_year": 3,
+     "notes": []
+    }
+   },
+   {
+    "policy_year": 4,
+    "mix": {
+     "member_id": "aarav",
+     "amount": 150000,
+     "policy_year": 4,
+     "covered": true,
+     "payable": 150000,
+     "out_of_pocket": 0,
+     "covered_from_year": 4,
+     "notes": []
+    },
+    "usual": {
+     "member_id": "aarav",
+     "amount": 150000,
+     "policy_year": 4,
+     "covered": true,
+     "payable": 150000,
+     "out_of_pocket": 0,
+     "covered_from_year": 4,
+     "notes": []
+    }
+   }
+  ]
  }
 ]
