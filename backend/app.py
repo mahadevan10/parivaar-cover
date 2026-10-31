@@ -220,7 +220,9 @@ def chat(req: ChatRequest):
     new = dict(out.get("family") or {})
     # ids come from names, so the LLM cannot rename a member
     new["members"] = [{k: v for k, v in m.items() if k != "id"} for m in new.get("members") or []]
-    family = grounded(clean_family(new, family), family, history)
+    # The check runs on English, so values said in Malayalam or Hindi are not thrown away
+    english = [dict(t, content=llm.to_english(t["content"])) if t["role"] == "user" else t for t in history]
+    family = grounded(clean_family(new, family), family, english)
     missing = missing_details(family)
     reply = tidy(out.get("reply", ""))
     for proper in [m["name"] for m in family["members"]] + [family["city"] or ""]:
@@ -379,8 +381,22 @@ RELATION_WORDS = {
     "spouse": ["wife", "husband", "spouse"],
     "father": ["father", "dad", "papa", "appa"],
     "mother": ["mother", "mom", "mum", "mummy", "amma", "maa"],
-    "son": ["son"], "daughter": ["daughter"],
+    "son": ["son", "children", "child", "kids"], "daughter": ["daughter", "children", "child", "kids"],
 }
+# Translated messages often spell numbers out: "my wife is twenty-three"
+UNITS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
+         "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
+TENS = ["twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+NUMBER_WORDS = re.compile(rf"\b(?:({'|'.join(TENS)})(?:[\s-]+({'|'.join(UNITS[1:10])}))?|({'|'.join(UNITS)}))\b")
+
+
+def with_digits(text):
+    """Writes number words as digits, so "sixty-four" can be matched against an age of 64."""
+    def number(m):
+        if m.group(3):
+            return str(UNITS.index(m.group(3)))
+        return str(20 + 10 * TENS.index(m.group(1)) + (UNITS.index(m.group(2)) if m.group(2) else 0))
+    return NUMBER_WORDS.sub(number, text)
 
 
 OFFICE_WORDS = ["office", "company", "employer", "corporate", "work", "job", "group"]
@@ -400,7 +416,7 @@ def passages(history, members):
     """Pieces of what the user said. A sentence naming nobody is read with the question it answers."""
     out, asked = [], ""
     for turn in history:
-        text = turn["content"].lower()
+        text = with_digits(turn["content"].lower())
         if turn["role"] != "user":
             asked = text
         elif any(mentions(text, m) for m in members):

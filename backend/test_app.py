@@ -83,6 +83,26 @@ class Intake(unittest.TestCase):
             body = client.post("/chat", json={"message": "60", "family": family, "history": history}).json()
         self.assertEqual(body["family"]["members"][0]["age"], 60)
 
+    def test_keeps_ages_said_in_malayalam(self):
+        # The Malayalam turn from the demo, and what Sarvam's translation returns for it
+        said = "എന്റെ ഭാര്യക്ക് ഇരുപത്തിമൂന്ന് വയസ്സ്. എന്റെ മക്കൾക്ക് മോന് അഞ്ച് വയസ്സും മോൾക്ക് മൂന്ന് വയസ്സും."
+        english = "My wife is twenty-three years old. My children are five and three."
+        family = {"members": [{"id": "self", "name": "Self", "relation": "self", "age": 24, "conditions": []},
+                              {"id": "spouse", "name": "Spouse", "relation": "spouse", "conditions": []},
+                              {"id": "son", "name": "Son", "relation": "son", "conditions": []},
+                              {"id": "daughter", "name": "Daughter", "relation": "daughter", "conditions": []}]}
+        reply = {"reply": "Noted.", "family": {"members": [
+            {"name": "Self", "age": 24, "relation": "self"}, {"name": "Spouse", "age": 23, "relation": "spouse"},
+            {"name": "Son", "age": 5, "relation": "son"}, {"name": "Daughter", "age": 3, "relation": "daughter"}]}}
+        with mock.patch.object(app.llm, "ask_json", return_value=reply), \
+                mock.patch.object(app.llm, "to_english", side_effect=lambda t: english if t == said else t):
+            body = client.post("/chat", json={"message": said, "family": family}).json()
+        self.assertEqual([m["age"] for m in body["family"]["members"]], [24, 23, 5, 3])
+
+    def test_number_words_become_digits(self):
+        self.assertEqual(app.with_digits("father is sixty-four, mother sixty and son five"),
+                         "father is 64, mother 60 and son 5")
+
     def test_office_cover_needs_the_user_to_mention_it(self):
         reply = {"reply": "Noted.", "family": {"members": [], "office_checked": True}}
         with mock.patch.object(app.llm, "ask_json", return_value=reply):
